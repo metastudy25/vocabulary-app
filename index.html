@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>이든 단어카드 | Eden Word Master</title>
 <style>
   :root {
@@ -27,7 +27,9 @@
     --shadow-card: 0 8px 40px rgba(13,35,64,0.18);
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  /* 모바일 300ms 탭 딜레이 완전 제거 */
+  a, button, .card-scene, .leitner-card, .match-tile, .learn-option { touch-action: manipulation; }
 
   body {
     font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
@@ -507,7 +509,7 @@
   .leitner-card.flipped-card { background: var(--gold-pale); }
   .lc-word { font-size: clamp(28px, 5.5vw, 50px); font-weight: 900; text-align:center; padding:0 28px; }
   .lc-meaning { font-size: clamp(22px, 4.5vw, 40px); font-weight: 800; text-align:center; padding:0 28px; }
-  .lc-tap { font-size: 14px; color: var(--gray-400); margin-top: 12px; }
+  .lc-tap { display: none; }
   /* 스와이프 방향 라벨 */
   .lc-swipe-label {
     position: absolute;
@@ -748,68 +750,125 @@
   .learn-option.wrong { border-color: var(--red); background: rgba(239,68,68,.12); color: var(--red); }
 
   /* ────────── 게임: 카드 맞추기 ────────── */
-  #screen-match { background: var(--navy); }
-  .match-area { flex: 1; padding: 20px; }
-  .match-timer {
-    text-align: center;
-    font-size: 28px;
-    font-weight: 900;
-    color: var(--gold);
-    margin-bottom: 16px;
+  #screen-match {
+    background: var(--navy);
+    display: none;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+  #screen-match.active { display: flex; }
+
+  .match-area {
+    flex: 1;
+    padding: 10px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
   .match-grid {
+    flex: 1;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    gap: 8px;
+    /* 화면을 꽉 채움 */
   }
   .match-tile {
     background: var(--navy-mid);
-    border: 2px solid rgba(201,162,75,.2);
+    border: 2.5px solid rgba(201,162,75,.3);
     border-radius: var(--radius-md);
-    padding: 14px 10px;
+    padding: 6px 8px;
     text-align: center;
-    font-size: 15px;
-    font-weight: 700;
+    /* 텍스트 크기: 전체 단어 크게 */
+    font-size: clamp(15px, 2.8vw, 22px);
+    font-weight: 800;
     cursor: pointer;
-    transition: all .2s;
-    min-height: 64px;
+    transition: border-color .18s, background .18s, transform .18s;
     display: flex;
     align-items: center;
     justify-content: center;
-    line-height: 1.3;
+    line-height: 1.25;
+    word-break: keep-all;
+    position: relative;
+    touch-action: manipulation;
   }
-  .match-tile:hover { border-color: var(--gold); background: rgba(201,162,75,.08); }
-  .match-tile.selected { border-color: var(--gold); background: rgba(201,162,75,.2); }
-  .match-tile.matched { border-color: var(--green); background: rgba(34,197,94,.1); color: var(--green); opacity: .5; pointer-events: none; }
-  .match-tile.wrong-flash { border-color: var(--red); background: rgba(239,68,68,.15); }
+  .match-tile:hover  { border-color: var(--gold); background: rgba(201,162,75,.1); transform: scale(1.03); }
+  .match-tile.selected {
+    border-color: var(--gold);
+    background: rgba(201,162,75,.22);
+    box-shadow: 0 0 0 3px rgba(201,162,75,.35);
+    transform: scale(1.05);
+  }
+  .match-tile.matched-anim {
+    animation: tileVanish .42s ease forwards;
+    pointer-events: none;
+  }
+  @keyframes tileVanish {
+    0%   { opacity:1; transform:scale(1.08); background:rgba(34,197,94,.3); border-color:var(--green); color:var(--green); }
+    55%  { opacity:.7; transform:scale(1.18); }
+    100% { opacity:0; transform:scale(0.5); }
+  }
+  .match-tile.gone {
+    visibility: hidden;
+    pointer-events: none;
+    border-color: transparent !important;
+    background: transparent !important;
+  }
+  .match-tile.wrong-flash {
+    border-color: var(--red) !important;
+    background: rgba(239,68,68,.2) !important;
+    animation: wrongShake .28s ease;
+  }
+  @keyframes wrongShake {
+    0%,100% { transform: translateX(0); }
+    25%     { transform: translateX(-7px); }
+    75%     { transform: translateX(7px); }
+  }
 
   /* ────────── 게임: 블래스트 ────────── */
-  #screen-blast { background: #000; }
-  #blast-canvas { display: block; width: 100%; }
+  #screen-blast { background: #000814; position: relative; }
+  #blast-canvas { display: block; width: 100%; height: 100vh; }
   .blast-hud {
     position: absolute;
-    top: 70px;
-    left: 0;
-    right: 0;
-    padding: 10px 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    top: 0; left: 0; right: 0;
     pointer-events: none;
     z-index: 10;
   }
-  .blast-score { font-size: 22px; font-weight: 900; color: var(--gold); }
+  .blast-top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px 8px;
+    background: rgba(10,22,40,.9);
+    border-bottom: 1px solid rgba(201,162,75,.2);
+  }
+  .blast-back-btn {
+    pointer-events: all;
+    background: none;
+    border: none;
+    color: var(--gold);
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px 10px;
+  }
+  .blast-score { font-size: 20px; font-weight: 900; color: var(--gold); }
+  .blast-question-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 10px 16px 0;
+  }
   .blast-question {
-    background: rgba(13,35,64,.85);
-    border: 2px solid var(--gold);
-    border-radius: var(--radius-md);
-    padding: 10px 20px;
-    font-size: 18px;
-    font-weight: 700;
+    background: rgba(10,22,40,.92);
+    border: 2.5px solid var(--gold);
+    border-radius: 14px;
+    padding: 12px 32px;
+    font-size: 26px;
+    font-weight: 900;
     color: var(--white);
     text-align: center;
-    margin: 0 auto;
-    max-width: 240px;
+    letter-spacing: .04em;
+    text-shadow: 0 0 12px rgba(201,162,75,.5);
   }
 
   /* ────────── 결과 / 리포트 ────────── */
@@ -1087,7 +1146,7 @@
           <button class="star-btn" id="s1-star" onclick="event.stopPropagation(); toggleStar()">☆</button>
           <div class="card-word" id="s1-word"></div>
           <div class="card-phonetic" id="s1-phonetic"></div>
-          <div class="card-hint">👆 탭: 뒤집기 &nbsp;|&nbsp; 👉 스와이프: 분류</div>
+
         </div>
         <div class="card-face card-back" id="s1-back">
           <button class="star-btn" id="s1-star-back" onclick="event.stopPropagation(); toggleStar()">☆</button>
@@ -1268,9 +1327,12 @@
 ════════════════════════════════════════ -->
 <div id="screen-match" class="screen">
   <div class="stage-header">
-    <button class="btn-back" onclick="showScreen('screen-mode')">←</button>
+    <button class="btn-back" onclick="stopMatch(); showScreen('screen-mode')">←</button>
     <div class="stage-title-text">카드 맞추기</div>
-    <div class="match-timer" id="match-timer" style="margin-left:auto;font-size:16px;color:var(--gold);">0.0초</div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:12px;color:var(--gray-400);">최고: <span id="match-best">-</span></span>
+      <span id="match-timer" style="font-size:18px;font-weight:900;color:var(--gold);">0.0초</span>
+    </div>
   </div>
   <div class="match-area">
     <div class="match-grid" id="match-grid"></div>
@@ -1280,17 +1342,18 @@
 <!-- ═══════════════════════════════════════
      화면 10: 블래스트
 ════════════════════════════════════════ -->
-<div id="screen-blast" class="screen" style="position:relative;">
-  <div class="app-header" style="position:absolute;top:0;left:0;right:0;z-index:20;background:rgba(13,35,64,.85);">
-    <button class="btn-back" onclick="stopBlast(); showScreen('screen-mode')">←</button>
-    <div class="header-logo">🚀 BLAST</div>
-    <div></div>
-  </div>
+<div id="screen-blast" class="screen" style="position:relative;overflow:hidden;">
+  <canvas id="blast-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
   <div class="blast-hud">
-    <div class="blast-score">점수: <span id="blast-score">0</span></div>
-    <div class="blast-question" id="blast-question">준비...</div>
+    <div class="blast-top-bar">
+      <button class="blast-back-btn" onclick="stopBlast(); showScreen('screen-mode')">←</button>
+      <div class="blast-score">⭐ <span id="blast-score">0</span>점</div>
+      <div style="width:50px;"></div>
+    </div>
+    <div class="blast-question-wrap">
+      <div class="blast-question" id="blast-question">준비...</div>
+    </div>
   </div>
-  <canvas id="blast-canvas"></canvas>
 </div>
 
 <!-- ═══════════════════════════════════════
@@ -1705,9 +1768,13 @@ function initSwipe(el, onSwipe, onTap, labelIds) {
     if (!isDragging) return;
     isDragging=false;
     const dx=curX-startX, dy=curY-startY;
-    if (!moved) { onTap && onTap(); return; }
+    if (!moved) {
+      e.preventDefault(); // 브라우저 기본 300ms 딜레이 방지
+      onTap && onTap();
+      return;
+    }
     commit(dx, dy);
-  });
+  }, {passive:false});
 }
 
 // ══════════════════════════════════════════
@@ -1863,7 +1930,7 @@ function flipLeitner() {
   } else {
     card.classList.remove('flipped-card');
     const wd = document.createElement('div'); wd.className='lc-word'; wd.id='s2-word'; wd.textContent=w.en; card.appendChild(wd);
-    const td = document.createElement('div'); td.className='lc-tap'; td.id='s2-tap'; td.textContent='탭하여 뜻 확인'; card.appendChild(td);
+    const td = document.createElement('div'); td.className='lc-tap'; td.id='s2-tap'; td.textContent=''; card.appendChild(td);
     speakWord(w.en);
   }
 }
@@ -2071,7 +2138,7 @@ function renderStage3() {
   card.innerHTML = '';
   labels.forEach(l => { l.style.opacity='0'; card.appendChild(l); });
   const wd = document.createElement('div'); wd.className='lc-word'; wd.id='s3-word'; wd.textContent=w.en; card.appendChild(wd);
-  const td = document.createElement('div'); td.className='lc-tap'; td.id='s3-tap'; td.textContent='탭하여 뒤집기'; card.appendChild(td);
+  const td = document.createElement('div'); td.className='lc-tap'; td.id='s3-tap'; td.textContent=''; card.appendChild(td);
   card.classList.remove('flipped-card');
   state.s3Flipped = false;
   speakWord(w.en);
@@ -2089,11 +2156,11 @@ function flipLeitner3() {
     card.classList.add('flipped-card');
     const md = document.createElement('div'); md.className='lc-meaning'; md.textContent=w.ko; card.appendChild(md);
     const sd = document.createElement('div'); sd.style.cssText='font-size:14px;color:#64748b;margin-top:8px;'; sd.textContent=w.en; card.appendChild(sd);
-    const td2 = document.createElement('div'); td2.className='lc-tap'; td2.textContent='스와이프로 분류'; card.appendChild(td2);
+    const td2 = document.createElement('div'); td2.className='lc-tap'; td2.textContent=''; card.appendChild(td2);
   } else {
     card.classList.remove('flipped-card');
     const wd2 = document.createElement('div'); wd2.className='lc-word'; wd2.id='s3-word'; wd2.textContent=w.en; card.appendChild(wd2);
-    const td2 = document.createElement('div'); td2.className='lc-tap'; td2.id='s3-tap'; td2.textContent='탭하여 뒤집기'; card.appendChild(td2);
+    const td2 = document.createElement('div'); td2.className='lc-tap'; td2.id='s3-tap'; td2.textContent=''; card.appendChild(td2);
   }
 }
 function startTimer3() {
@@ -2234,93 +2301,224 @@ function renderLearn() {
 function speakLearn() { speakWord(document.getElementById('learn-qword').textContent); }
 
 // ═══════════════════════════════════════════════
-// 게임: 카드 맞추기
+// 게임: 카드 맞추기 (12타일, 사라지기 애니메이션)
 // ═══════════════════════════════════════════════
 function startMatch() {
-  const words = state.currentUnit.words.slice(0,8).sort(() => Math.random()-.5);
+  // 6쌍 = 12타일
+  const pool = state.currentUnit.words.slice();
+  const pick = pool.sort(() => Math.random()-.5).slice(0, Math.min(6, pool.length));
   const items = [];
-  words.forEach(w => { items.push({id:w.en, text:w.en, type:'en', matched:false}); items.push({id:w.en, text:w.ko, type:'ko', matched:false}); });
+  pick.forEach(w => {
+    items.push({id:w.en, text:w.en, type:'en', matched:false, gone:false});
+    items.push({id:w.en, text:w.ko,  type:'ko', matched:false, gone:false});
+  });
   state.matchItems = items.sort(() => Math.random()-.5);
-  state.matchSelected = null; state.matchElapsed = 0;
-  clearInterval(state.matchTimer);
-  state.matchTimer = setInterval(() => {
+  state.matchSelected = null; state.matchElapsed = 0; state.matchLocked = false;
+  const best = localStorage.getItem('eden_match_best_'+state.currentUnit.id);
+  document.getElementById('match-best').textContent = best ? best+'초' : '-';
+  clearInterval(state.matchTimerInt);
+  state.matchTimerInt = setInterval(() => {
     state.matchElapsed += .1;
-    document.getElementById('match-timer').textContent = state.matchElapsed.toFixed(1) + '초';
+    document.getElementById('match-timer').textContent = state.matchElapsed.toFixed(1)+'초';
   }, 100);
   showScreen('screen-match');
+  // 그리드 높이: 전체화면 꽉 채우기
+  requestAnimationFrame(() => {
+    const header = document.querySelector('#screen-match .stage-header');
+    const area   = document.querySelector('.match-area');
+    const avail  = window.innerHeight - (header ? header.offsetHeight : 56) - 22;
+    const rows   = Math.ceil(state.matchItems.length / 3); // 12개 = 4행
+    document.getElementById('match-grid').style.gridTemplateRows = `repeat(${rows}, ${Math.floor(avail / rows)}px)`;
+  });
   renderMatch();
 }
+function stopMatch() { clearInterval(state.matchTimerInt); }
 function renderMatch() {
   const grid = document.getElementById('match-grid');
   grid.innerHTML = '';
   state.matchItems.forEach((item, idx) => {
     const tile = document.createElement('div');
-    tile.className = 'match-tile' + (item.matched ? ' matched' : '');
-    tile.textContent = item.text;
-    tile.dataset.idx = idx;
-    if (!item.matched) tile.onclick = () => selectMatchTile(idx);
+    if (item.gone) {
+      tile.className = 'match-tile gone';
+    } else {
+      tile.className = 'match-tile';
+      tile.textContent = item.text;
+      tile.dataset.idx = idx;
+      tile.onclick = () => selectMatchTile(idx);
+    }
     grid.appendChild(tile);
   });
 }
 function selectMatchTile(idx) {
+  if (state.matchLocked) return;
   const item = state.matchItems[idx];
-  if (item.matched) return;
+  if (item.matched || item.gone) return;
   const tiles = document.querySelectorAll('.match-tile');
+
   if (state.matchSelected === null) {
     state.matchSelected = idx;
     tiles[idx].classList.add('selected');
-  } else {
-    const prev = state.matchItems[state.matchSelected];
-    if (state.matchSelected === idx) { tiles[idx].classList.remove('selected'); state.matchSelected = null; return; }
-    if (prev.id === item.id && prev.type !== item.type) {
+    return;
+  }
+  if (state.matchSelected === idx) {
+    tiles[idx].classList.remove('selected');
+    state.matchSelected = null;
+    return;
+  }
+
+  const prev = state.matchItems[state.matchSelected];
+  const prevTile = tiles[state.matchSelected];
+
+  if (prev.id === item.id && prev.type !== item.type) {
+    // 정답 — 애니메이션 후 사라지기
+    state.matchLocked = true;
+    speakWord(item.id);
+    prevTile.classList.remove('selected');
+    prevTile.classList.add('matched-anim');
+    tiles[idx].classList.add('matched-anim');
+    setTimeout(() => {
       state.matchItems[state.matchSelected].matched = true;
+      state.matchItems[state.matchSelected].gone = true;
       state.matchItems[idx].matched = true;
-      speakWord(item.id);
+      state.matchItems[idx].gone = true;
       state.matchSelected = null;
+      state.matchLocked = false;
       renderMatch();
-      if (state.matchItems.every(i => i.matched)) {
-        clearInterval(state.matchTimer);
-        showToast(`완료! ${state.matchElapsed.toFixed(1)}초 🎯`);
-        setTimeout(() => showScreen('screen-mode'), 1500);
+      if (state.matchItems.every(i => i.gone)) {
+        clearInterval(state.matchTimerInt);
+        const t = state.matchElapsed.toFixed(1);
+        const best = localStorage.getItem('eden_match_best_'+state.currentUnit.id);
+        if (!best || parseFloat(t) < parseFloat(best)) {
+          localStorage.setItem('eden_match_best_'+state.currentUnit.id, t);
+        }
+        showToast(`완료! ${t}초 🎯`);
+        setTimeout(() => showScreen('screen-mode'), 1600);
       }
-    } else {
-      tiles[idx].classList.add('wrong-flash');
-      tiles[state.matchSelected].classList.add('wrong-flash');
-      state.matchElapsed += 3; // 페널티
-      document.getElementById('match-timer').textContent = state.matchElapsed.toFixed(1) + '초';
-      setTimeout(() => { tiles.forEach(t => t.classList.remove('wrong-flash','selected')); state.matchSelected = null; }, 600);
-    }
+    }, 460);
+  } else {
+    // 오답
+    state.matchLocked = true;
+    prevTile.classList.remove('selected');
+    prevTile.classList.add('wrong-flash');
+    tiles[idx].classList.add('wrong-flash');
+    state.matchElapsed = Math.max(0, state.matchElapsed + 3);
+    setTimeout(() => {
+      tiles.forEach(t => t.classList.remove('wrong-flash','selected'));
+      state.matchSelected = null;
+      state.matchLocked = false;
+    }, 500);
   }
 }
 
 // ═══════════════════════════════════════════════
-// 게임: 블래스트
+// 게임: 블래스트 (퀴즈렛 방식 - 클릭 즉시 판정)
 // ═══════════════════════════════════════════════
-let blastCanvas, blastCtx, blastMX = 0, blastMY = 0;
-let blastBullets = [], blastAsteroids = [], blastAnim = null;
-let blastShipX = 0, blastShipY = 0, blastScore = 0;
+let blastCanvas, blastCtx;
+let blastAnimId = null;
+let blastAsteroids = [], blastScore = 0;
 let blastQWords = [], blastCurrentQ = null, blastQIdx = 0;
+let blastShipAngle = 0;
+let blastCX = 0, blastCY = 0; // 마우스/터치 위치
+let blastShipX = 0, blastShipY = 0;
+let blastAnswered = false; // 중복 클릭 방지
+let blastStars = []; // 배경 별
 
 function startBlast() {
   showScreen('screen-blast');
   blastCanvas = document.getElementById('blast-canvas');
-  blastCanvas.width = window.innerWidth;
-  blastCanvas.height = window.innerHeight;
+  const resize = () => {
+    blastCanvas.width = blastCanvas.offsetWidth;
+    blastCanvas.height = blastCanvas.offsetHeight || window.innerHeight;
+  };
+  resize();
   blastCtx = blastCanvas.getContext('2d');
   blastShipX = blastCanvas.width / 2;
   blastShipY = blastCanvas.height - 80;
-  blastScore = 0;
-  blastBullets = []; blastAsteroids = [];
+  blastCX = blastShipX; blastCY = blastShipY - 100;
+  blastScore = 0; blastAsteroids = []; blastAnswered = false;
+  document.getElementById('blast-score').textContent = '0';
+
+  // 배경 별 생성
+  blastStars = Array.from({length:80}, () => ({
+    x: Math.random() * blastCanvas.width,
+    y: Math.random() * blastCanvas.height,
+    r: Math.random() * 1.5 + .3,
+    a: Math.random() * .7 + .2,
+    vy: Math.random() * .15 + .05
+  }));
+
   blastQWords = [...state.currentUnit.words].sort(() => Math.random()-.5);
   blastQIdx = 0;
   nextBlastQuestion();
-  blastCanvas.addEventListener('mousemove', onBlastMouse);
-  blastCanvas.addEventListener('touchmove', onBlastTouch, {passive:false});
-  blastCanvas.addEventListener('click', fireBlast);
-  blastCanvas.addEventListener('touchend', fireBlast);
-  if (blastAnim) cancelAnimationFrame(blastAnim);
+
+  // 이벤트 (중복 방지 위해 클론 교체)
+  const nc = blastCanvas.cloneNode(true);
+  blastCanvas.parentNode.replaceChild(nc, blastCanvas);
+  blastCanvas = nc;
+  blastCtx = blastCanvas.getContext('2d');
+
+  blastCanvas.addEventListener('mousemove', e => {
+    const r = blastCanvas.getBoundingClientRect();
+    blastCX = e.clientX - r.left; blastCY = e.clientY - r.top;
+  });
+  blastCanvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const r = blastCanvas.getBoundingClientRect();
+    blastCX = e.touches[0].clientX - r.left; blastCY = e.touches[0].clientY - r.top;
+  }, {passive:false});
+
+  // 클릭 = 가장 가까운 소행성 즉시 판정 (퀴즈렛 방식)
+  blastCanvas.addEventListener('click', onBlastClick);
+  blastCanvas.addEventListener('touchend', e => {
+    const r = blastCanvas.getBoundingClientRect();
+    const tx = e.changedTouches[0].clientX - r.left;
+    const ty = e.changedTouches[0].clientY - r.top;
+    onBlastClick({clientX: tx + r.left, clientY: ty + r.top, _tx: tx, _ty: ty});
+  });
+
+  if (blastAnimId) cancelAnimationFrame(blastAnimId);
   blastLoop();
 }
+
+function onBlastClick(e) {
+  if (blastAnswered) return;
+  const r = blastCanvas.getBoundingClientRect();
+  const cx = e._tx !== undefined ? e._tx : (e.clientX - r.left);
+  const cy = e._ty !== undefined ? e._ty : (e.clientY - r.top);
+  // 클릭 위치에서 가장 가까운 소행성 찾기
+  let closest = null, minDist = 9999;
+  blastAsteroids.forEach(a => {
+    if (a.exploding || a.gone) return;
+    const d = Math.hypot(cx - a.x, cy - a.y);
+    if (d < minDist) { minDist = d; closest = a; }
+  });
+  // 클릭 반경 내 소행성 (r+30px 여유)
+  if (closest && minDist < closest.r + 30) {
+    hitAsteroid(closest);
+  }
+}
+
+function hitAsteroid(a) {
+  if (a.exploding || a.gone) return;
+  blastAnswered = true;
+  a.exploding = true; a.expFrame = 0;
+  if (a.isAnswer) {
+    blastScore += 10;
+    document.getElementById('blast-score').textContent = blastScore;
+    showToast('정답! +10점 💥');
+    // 즉시 다음 문제로 — 폭발 애니(약 0.3s) 후 바로 전환
+    setTimeout(() => {
+      blastAnswered = false;
+      nextBlastQuestion();
+    }, 320);
+  } else {
+    blastScore = Math.max(0, blastScore - 5);
+    document.getElementById('blast-score').textContent = blastScore;
+    showToast('오답! -5점 ❌');
+    setTimeout(() => { blastAnswered = false; }, 500);
+  }
+}
+
 function nextBlastQuestion() {
   if (blastQIdx >= blastQWords.length) blastQIdx = 0;
   blastCurrentQ = blastQWords[blastQIdx++];
@@ -2328,103 +2526,160 @@ function nextBlastQuestion() {
   speakWord(blastCurrentQ.en);
   spawnAsteroids();
 }
+
 function spawnAsteroids() {
   blastAsteroids = [];
-  const others = state.currentUnit.words.filter(w => w.en !== blastCurrentQ.en).sort(() => Math.random()-.5).slice(0,4);
-  const all = [...others, blastCurrentQ].sort(() => Math.random()-.5);
+  const pool = state.currentUnit.words.filter(w => w.en !== blastCurrentQ.en)
+    .sort(() => Math.random()-.5).slice(0, 4);
+  const all = [...pool, blastCurrentQ].sort(() => Math.random()-.5);
+  const W = blastCanvas.width;
+  const r_base = Math.min(54, W / 8); // 반응형 크기
+
+  // 흩어져 내려오기: 각 소행성마다 완전히 다른 시작 X, 다른 시작 Y 딜레이
+  const usedX = [];
   all.forEach((w, i) => {
+    const r = r_base + Math.random() * 10;
+    // X: 겹치지 않게 랜덤 배치
+    let x, tries = 0;
+    do {
+      x = r + Math.random() * (W - r * 2);
+      tries++;
+    } while (tries < 20 && usedX.some(ux => Math.abs(ux - x) < r * 2.2));
+    usedX.push(x);
+
+    // Y: 각자 다른 높이에서 시작 → 뭉쳐 보이지 않음
+    const startY = -r - i * (60 + Math.random() * 80);
+
     blastAsteroids.push({
-      x: 60 + (i * (blastCanvas.width-100)/all.length),
-      y: -60,
-      vy: 0.8 + Math.random()*0.8,
-      vx: (Math.random()-.5)*1.2,
-      r: 38,
+      x,
+      y: startY,
+      vy: 0.55 + Math.random() * 0.75,       // 속도도 제각각
+      vx: (Math.random() - 0.5) * 1.0,
+      r,
       word: w.en,
       isAnswer: w.en === blastCurrentQ.en,
-      exploding: false, expFrame: 0
+      exploding: false, expFrame: 0, gone: false
     });
   });
-}
-function onBlastMouse(e) {
-  const rect = blastCanvas.getBoundingClientRect();
-  blastMX = e.clientX - rect.left; blastMY = e.clientY - rect.top;
-}
-function onBlastTouch(e) {
-  e.preventDefault();
-  const rect = blastCanvas.getBoundingClientRect();
-  blastMX = e.touches[0].clientX - rect.left; blastMY = e.touches[0].clientY - rect.top;
-}
-function fireBlast(e) {
-  const angle = Math.atan2(blastMY - blastShipY, blastMX - blastShipX);
-  blastBullets.push({ x: blastShipX, y: blastShipY, vx: Math.cos(angle)*14, vy: Math.sin(angle)*14 });
-}
-function blastLoop() {
-  blastCtx.clearRect(0,0,blastCanvas.width,blastCanvas.height);
-  blastCtx.fillStyle = '#000814';
-  blastCtx.fillRect(0,0,blastCanvas.width,blastCanvas.height);
-  // 별
-  for (let i=0;i<60;i++) { blastCtx.fillStyle='rgba(255,255,255,.4)'; blastCtx.fillRect((i*137)%blastCanvas.width,(i*97+Date.now()*.01)%blastCanvas.height,1.5,1.5); }
-  // 우주선
-  const angle = Math.atan2(blastMY-blastShipY, blastMX-blastShipX);
-  blastCtx.save();
-  blastCtx.translate(blastShipX,blastShipY);
-  blastCtx.rotate(angle+Math.PI/2);
-  blastCtx.fillStyle='#c9a24b';
-  blastCtx.beginPath(); blastCtx.moveTo(0,-22); blastCtx.lineTo(12,16); blastCtx.lineTo(-12,16); blastCtx.closePath(); blastCtx.fill();
-  blastCtx.restore();
-  // 총알
-  blastBullets = blastBullets.filter(b => b.y > 0 && b.y < blastCanvas.height && b.x > 0 && b.x < blastCanvas.width);
-  blastBullets.forEach(b => {
-    b.x += b.vx; b.y += b.vy;
-    blastCtx.fillStyle='#e8c97a';
-    blastCtx.beginPath(); blastCtx.arc(b.x,b.y,5,0,Math.PI*2); blastCtx.fill();
-  });
-  // 소행성
-  blastAsteroids.forEach(a => {
-    if (!a.exploding) { a.x += a.vx; a.y += a.vy; }
-    if (a.y > blastCanvas.height + 60) a.y = -60;
-    if (a.exploding) {
-      a.expFrame++;
-      blastCtx.globalAlpha = 1 - a.expFrame/18;
-      blastCtx.strokeStyle = a.isAnswer ? '#22c55e' : '#ef4444';
-      blastCtx.lineWidth=3;
-      blastCtx.beginPath(); blastCtx.arc(a.x,a.y,a.r+a.expFrame*3,0,Math.PI*2); blastCtx.stroke();
-      blastCtx.globalAlpha=1;
-    } else {
-      blastCtx.fillStyle='rgba(30,50,90,.85)';
-      blastCtx.strokeStyle='rgba(201,162,75,.6)';
-      blastCtx.lineWidth=2;
-      blastCtx.beginPath(); blastCtx.arc(a.x,a.y,a.r,0,Math.PI*2); blastCtx.fill(); blastCtx.stroke();
-      blastCtx.fillStyle='#fff'; blastCtx.font='bold 13px Arial'; blastCtx.textAlign='center'; blastCtx.textBaseline='middle';
-      blastCtx.fillText(a.word, a.x, a.y);
-    }
-    // 충돌 체크
-    blastBullets.forEach((b,bi) => {
-      if (!a.exploding) {
-        const dist = Math.hypot(b.x-a.x, b.y-a.y);
-        if (dist < a.r + 5) {
-          a.exploding = true;
-          blastBullets.splice(bi,1);
-          if (a.isAnswer) {
-            blastScore += 10; showToast('정답! +10점 💥');
-            setTimeout(nextBlastQuestion, 800);
-          } else {
-            blastScore = Math.max(0, blastScore-5); showToast('오답! -5점 ❌');
-          }
-        }
-      }
-    });
-  });
-  blastAsteroids = blastAsteroids.filter(a => !(a.exploding && a.expFrame > 18));
-  document.getElementById('blast-score').textContent = blastScore;
-  blastAnim = requestAnimationFrame(blastLoop);
-}
-function stopBlast() {
-  if (blastAnim) cancelAnimationFrame(blastAnim);
-  blastCanvas?.removeEventListener('mousemove', onBlastMouse);
-  blastCanvas?.removeEventListener('click', fireBlast);
 }
 
+function blastLoop() {
+  const W = blastCanvas.width, H = blastCanvas.height;
+  blastCtx.clearRect(0, 0, W, H);
+
+  // 배경
+  blastCtx.fillStyle = '#000814';
+  blastCtx.fillRect(0, 0, W, H);
+
+  // 별 (천천히 내려옴)
+  blastStars.forEach(s => {
+    s.y += s.vy;
+    if (s.y > H) s.y = 0;
+    blastCtx.globalAlpha = s.a;
+    blastCtx.fillStyle = '#fff';
+    blastCtx.beginPath(); blastCtx.arc(s.x, s.y, s.r, 0, Math.PI*2); blastCtx.fill();
+  });
+  blastCtx.globalAlpha = 1;
+
+  // 우주선 (화면 아래 중앙 고정, 마우스 방향으로 회전)
+  blastShipAngle = Math.atan2(blastCY - blastShipY, blastCX - blastShipX);
+  blastCtx.save();
+  blastCtx.translate(blastShipX, blastShipY);
+  blastCtx.rotate(blastShipAngle + Math.PI / 2);
+  // 몸통
+  blastCtx.fillStyle = '#c9a24b';
+  blastCtx.beginPath(); blastCtx.moveTo(0,-28); blastCtx.lineTo(16,20); blastCtx.lineTo(0,12); blastCtx.lineTo(-16,20); blastCtx.closePath(); blastCtx.fill();
+  // 엔진
+  blastCtx.fillStyle = '#e8c97a';
+  blastCtx.beginPath(); blastCtx.moveTo(-8,12); blastCtx.lineTo(8,12); blastCtx.lineTo(4,28); blastCtx.lineTo(-4,28); blastCtx.closePath(); blastCtx.fill();
+  blastCtx.restore();
+
+  // 조준선
+  blastCtx.strokeStyle = 'rgba(201,162,75,.25)';
+  blastCtx.setLineDash([4,6]);
+  blastCtx.lineWidth = 1;
+  blastCtx.beginPath();
+  blastCtx.moveTo(blastShipX, blastShipY);
+  blastCtx.lineTo(blastShipX + Math.cos(blastShipAngle)*H, blastShipY + Math.sin(blastShipAngle)*H);
+  blastCtx.stroke();
+  blastCtx.setLineDash([]);
+
+  // 소행성
+  blastAsteroids.forEach(a => {
+    if (a.gone) return;
+    if (!a.exploding) {
+      a.x += a.vx; a.y += a.vy;
+      // 벽 반사
+      if (a.x - a.r < 0) { a.x = a.r; a.vx = Math.abs(a.vx); }
+      if (a.x + a.r > W) { a.x = W - a.r; a.vx = -Math.abs(a.vx); }
+      if (a.y > H + 80) { a.y = -a.r - 20; }
+    }
+
+    if (a.exploding) {
+      a.expFrame++;
+      const p = a.expFrame / 22;
+      // 폭발 링
+      blastCtx.globalAlpha = 1 - p;
+      blastCtx.strokeStyle = a.isAnswer ? '#22c55e' : '#ef4444';
+      blastCtx.lineWidth = 4;
+      blastCtx.beginPath(); blastCtx.arc(a.x, a.y, a.r + a.expFrame*4, 0, Math.PI*2); blastCtx.stroke();
+      // 파편
+      for (let i=0;i<6;i++) {
+        const ang = (i/6)*Math.PI*2;
+        blastCtx.fillStyle = a.isAnswer ? '#22c55e' : '#ef4444';
+        blastCtx.beginPath();
+        blastCtx.arc(a.x+Math.cos(ang)*(a.r*p*2), a.y+Math.sin(ang)*(a.r*p*2), 4*(1-p), 0, Math.PI*2);
+        blastCtx.fill();
+      }
+      blastCtx.globalAlpha = 1;
+      if (a.expFrame > 22) a.gone = true;
+      return;
+    }
+
+    // 소행성 본체 (퀴즈렛 스타일 - 보라빛 구체)
+    const grad = blastCtx.createRadialGradient(a.x-a.r*.3, a.y-a.r*.3, a.r*.1, a.x, a.y, a.r);
+    grad.addColorStop(0, a.isAnswer ? 'rgba(60,120,200,.95)' : 'rgba(40,30,120,.95)');
+    grad.addColorStop(1, a.isAnswer ? 'rgba(20,50,140,.85)' : 'rgba(15,10,60,.85)');
+    blastCtx.fillStyle = grad;
+    blastCtx.beginPath(); blastCtx.arc(a.x, a.y, a.r, 0, Math.PI*2); blastCtx.fill();
+    // 테두리
+    blastCtx.strokeStyle = a.isAnswer ? 'rgba(100,180,255,.7)' : 'rgba(100,80,200,.5)';
+    blastCtx.lineWidth = 2.5;
+    blastCtx.stroke();
+    // 광택
+    blastCtx.fillStyle = 'rgba(255,255,255,.12)';
+    blastCtx.beginPath(); blastCtx.ellipse(a.x-a.r*.25, a.y-a.r*.3, a.r*.35, a.r*.22, -Math.PI/4, 0, Math.PI*2); blastCtx.fill();
+    // 단어 텍스트 — 전체 크게, 정답/오답 동일 크기
+    blastCtx.fillStyle = '#ffffff';
+    blastCtx.textAlign = 'center';
+    blastCtx.textBaseline = 'middle';
+    blastCtx.shadowColor = 'rgba(0,0,0,.9)';
+    blastCtx.shadowBlur = 8;
+    const maxFontPx = Math.min(22, Math.floor(a.r * 0.44));
+    if (a.word.length <= 8) {
+      blastCtx.font = `900 ${maxFontPx}px 'Noto Sans KR', Arial`;
+      blastCtx.fillText(a.word, a.x, a.y);
+    } else {
+      // 긴 단어는 두 줄로
+      const half = Math.ceil(a.word.length / 2);
+      const line1 = a.word.substring(0, half);
+      const line2 = a.word.substring(half);
+      const lh = Math.max(12, maxFontPx - 2);
+      blastCtx.font = `900 ${Math.max(14, maxFontPx - 3)}px 'Noto Sans KR', Arial`;
+      blastCtx.fillText(line1, a.x, a.y - lh * 0.6);
+      blastCtx.fillText(line2, a.x, a.y + lh * 0.6);
+    }
+    blastCtx.shadowBlur = 0;
+  });
+
+  blastAsteroids = blastAsteroids.filter(a => !a.gone);
+  blastAnimId = requestAnimationFrame(blastLoop);
+}
+
+function stopBlast() {
+  if (blastAnimId) cancelAnimationFrame(blastAnimId);
+  blastAnimId = null;
+}
 // ═══════════════════════════════════════════════
 // TTS 발음
 // ═══════════════════════════════════════════════
@@ -2543,10 +2798,40 @@ function showToast(msg) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
 }
 
-// 엔터키 로그인
+// 키보드 이벤트 (엔터 로그인 + 화살표 카드 조작)
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    if (document.getElementById('screen-login').classList.contains('active')) doLogin();
+  const active = document.querySelector('.screen.active');
+  if (!active) return;
+  const id = active.id;
+
+  // 로그인 엔터
+  if (id === 'screen-login' && e.key === 'Enter') { doLogin(); return; }
+
+  // 1차 학습: 화살표로 카드 이동
+  if (id === 'screen-stage1') {
+    if (e.key === 'ArrowRight') { e.preventDefault(); nextCard(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); prevCard(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); toggleStar(); showToast('별표! ★'); }
+    else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flipCard(); }
+    return;
+  }
+
+  // 2차 학습: 화살표로 라이트너 분류
+  if (id === 'screen-stage2') {
+    if (e.key === 'ArrowRight') { e.preventDefault(); leitnerSwipe('right'); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); leitnerSwipe('left'); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); leitnerSwipe('top'); }
+    else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flipLeitner(); }
+    return;
+  }
+
+  // 3차 테스트: 화살표로 분류
+  if (id === 'screen-stage3') {
+    if (e.key === 'ArrowRight') { e.preventDefault(); leitner3Swipe('right'); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); leitner3Swipe('left'); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); leitner3Swipe('top'); }
+    else if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); flipLeitner3(); }
+    return;
   }
 });
 
