@@ -218,7 +218,7 @@
   .mode-status.active { color: var(--gold); }
 
   /* ────────── 1차 학습 (플래시카드) ────────── */
-  #screen-stage1 { background: var(--navy); }
+  #screen-stage1 { background: #0a1628; }
   .stage-header {
     background: var(--navy-mid);
     padding: 14px 20px;
@@ -226,93 +226,128 @@
     align-items: center;
     gap: 12px;
     border-bottom: 1px solid rgba(201,162,75,.15);
+    position: relative;
+    z-index: 10;
   }
   .btn-back { background: none; border: none; color: var(--gold); font-size: 22px; cursor: pointer; padding: 0 6px; }
   .stage-title-text { font-size: 16px; font-weight: 700; }
   .stage-progress-text { margin-left: auto; font-size: 13px; color: var(--gray-400); }
 
+  /* ── 퀴즈렛 스타일 전체화면 카드 영역 ── */
   .flashcard-area {
     flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 24px 20px;
+    padding: 12px 16px 16px;
     position: relative;
+    overflow: hidden;
   }
 
   .card-counter {
     font-size: 13px;
     color: var(--gray-400);
-    margin-bottom: 20px;
+    margin-bottom: 10px;
+    font-weight: 600;
   }
 
-  /* 카드 flip */
-  .card-scene {
-    width: 320px;
-    max-width: 90vw;
-    height: 200px;
-    perspective: 800px;
-    cursor: pointer;
-    position: relative;
+  /* 스와이프 방향 안내 오버레이 */
+  .swipe-indicator {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 52px;
+    font-weight: 900;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .15s;
+    z-index: 20;
+    border-radius: 16px;
+    padding: 12px 24px;
+    border: 4px solid;
   }
+  .swipe-indicator.left  { left: 20px;  color: var(--red);    border-color: var(--red);    background: rgba(239,68,68,.12); }
+  .swipe-indicator.right { right: 20px; color: var(--green);  border-color: var(--green);  background: rgba(34,197,94,.12); }
+  .swipe-indicator.up    { top: 80px; transform:none; left:50%; margin-left:-60px; color: var(--orange); border-color: var(--orange); background: rgba(245,158,11,.12); }
+
+  /* 카드 씬 — 거의 전체 화면 */
+  .card-scene {
+    width: min(680px, calc(100vw - 32px));
+    height: min(420px, calc(100vh - 260px));
+    perspective: 1200px;
+    position: relative;
+    touch-action: none;
+    cursor: grab;
+    flex-shrink: 0;
+  }
+  .card-scene:active { cursor: grabbing; }
+
   .card-inner {
     width: 100%;
     height: 100%;
     position: relative;
     transform-style: preserve-3d;
-    transition: transform .45s cubic-bezier(.4,0,.2,1);
+    transition: transform .48s cubic-bezier(.4,0,.2,1);
+    border-radius: 24px;
   }
   .card-inner.flipped { transform: rotateY(180deg); }
+  /* 드래그 중엔 flip 애니메이션 끄기 */
+  .card-inner.dragging { transition: none; }
+
   .card-face {
     position: absolute;
     width: 100%;
     height: 100%;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
-    border-radius: var(--radius-lg);
+    border-radius: 24px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    box-shadow: var(--shadow-card);
+    box-shadow: 0 16px 56px rgba(0,0,0,.35);
   }
-  .card-front {
-    background: var(--white);
-    color: var(--navy);
-  }
-  .card-back {
-    background: var(--gold-pale);
-    color: var(--navy);
-    transform: rotateY(180deg);
-  }
+  .card-front { background: var(--white); color: var(--navy); }
+  .card-back  { background: var(--gold-pale); color: var(--navy); transform: rotateY(180deg); }
+
   .card-word {
-    font-size: 32px;
+    font-size: clamp(32px, 6vw, 56px);
     font-weight: 900;
     letter-spacing: .02em;
     text-align: center;
-    padding: 0 20px;
+    padding: 0 32px;
+    line-height: 1.15;
   }
   .card-phonetic {
-    font-size: 14px;
+    font-size: clamp(14px, 2vw, 18px);
     color: var(--gray-600);
-    margin-top: 6px;
+    margin-top: 10px;
   }
   .card-meaning {
-    font-size: 22px;
-    font-weight: 700;
+    font-size: clamp(26px, 5vw, 44px);
+    font-weight: 800;
     text-align: center;
-    padding: 0 20px;
+    padding: 0 32px;
+    line-height: 1.2;
   }
   .card-example {
-    font-size: 12px;
+    font-size: clamp(13px, 1.8vw, 16px);
     color: var(--gray-600);
     text-align: center;
-    padding: 0 16px;
-    margin-top: 8px;
-    line-height: 1.5;
+    padding: 0 28px;
+    margin-top: 12px;
+    line-height: 1.6;
+    max-width: 480px;
   }
-  .card-hint { font-size: 13px; color: var(--gray-400); margin-top: 8px; }
+  .card-hint {
+    font-size: 14px;
+    color: var(--gray-400);
+    margin-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
 
   /* 별표 */
   .star-btn {
@@ -442,34 +477,53 @@
   .swipe-top { color: var(--orange); }
   .swipe-right { color: var(--green); }
 
-  /* 라이트너 카드 스와이프 */
+  /* 라이트너 카드 스와이프 — 전체화면 크기 */
   .leitner-card-wrap {
-    width: 320px;
-    max-width: 90vw;
-    height: 190px;
+    width: min(660px, calc(100vw - 32px));
+    height: min(380px, calc(100vh - 320px));
     position: relative;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
+    flex-shrink: 0;
+    touch-action: none;
   }
   .leitner-card {
     width: 100%;
     height: 100%;
     background: var(--white);
     color: var(--navy);
-    border-radius: var(--radius-lg);
+    border-radius: 24px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    box-shadow: var(--shadow-card);
+    box-shadow: 0 16px 56px rgba(0,0,0,.35);
     position: absolute;
-    transition: transform .3s, opacity .3s;
-    cursor: pointer;
+    cursor: grab;
     user-select: none;
+    will-change: transform;
   }
+  .leitner-card:active { cursor: grabbing; }
+  .leitner-card.animating { transition: transform .32s cubic-bezier(.4,0,.2,1), opacity .32s; }
   .leitner-card.flipped-card { background: var(--gold-pale); }
-  .lc-word { font-size: 28px; font-weight: 900; }
-  .lc-meaning { font-size: 20px; font-weight: 700; }
-  .lc-tap { font-size: 12px; color: var(--gray-400); margin-top: 8px; }
+  .lc-word { font-size: clamp(28px, 5.5vw, 50px); font-weight: 900; text-align:center; padding:0 28px; }
+  .lc-meaning { font-size: clamp(22px, 4.5vw, 40px); font-weight: 800; text-align:center; padding:0 28px; }
+  .lc-tap { font-size: 14px; color: var(--gray-400); margin-top: 12px; }
+  /* 스와이프 방향 라벨 */
+  .lc-swipe-label {
+    position: absolute;
+    top: 20px;
+    font-size: 22px;
+    font-weight: 900;
+    padding: 6px 18px;
+    border-radius: 10px;
+    border: 3px solid;
+    opacity: 0;
+    transition: opacity .1s;
+    pointer-events: none;
+  }
+  .lc-swipe-label.label-left  { left:20px;  color:var(--red);    border-color:var(--red);    background:rgba(239,68,68,.12); }
+  .lc-swipe-label.label-right { right:20px; color:var(--green);  border-color:var(--green);  background:rgba(34,197,94,.12); }
+  .lc-swipe-label.label-up    { left:50%; transform:translateX(-50%); color:var(--orange); border-color:var(--orange); background:rgba(245,158,11,.12); }
 
   .leitner-btns {
     display: flex;
@@ -1021,27 +1075,40 @@
   </div>
   <div class="flashcard-area">
     <div class="card-counter" id="s1-counter"></div>
-    <div class="card-scene" id="s1-card-scene" onclick="flipCard()">
+
+    <!-- 스와이프 방향 인디케이터 (카드 바깥) -->
+    <div class="swipe-indicator left"  id="si-left">✗ 모름</div>
+    <div class="swipe-indicator right" id="si-right">✓ 알아!</div>
+    <div class="swipe-indicator up"    id="si-up">△ 애매</div>
+
+    <div class="card-scene" id="s1-card-scene">
       <div class="card-inner" id="s1-card-inner">
         <div class="card-face card-front" id="s1-front">
           <button class="star-btn" id="s1-star" onclick="event.stopPropagation(); toggleStar()">☆</button>
           <div class="card-word" id="s1-word"></div>
           <div class="card-phonetic" id="s1-phonetic"></div>
-          <div class="card-hint">클릭하여 뒤집기</div>
+          <div class="card-hint">👆 탭: 뒤집기 &nbsp;|&nbsp; 👉 스와이프: 분류</div>
         </div>
         <div class="card-face card-back" id="s1-back">
+          <button class="star-btn" id="s1-star-back" onclick="event.stopPropagation(); toggleStar()">☆</button>
           <div class="card-meaning" id="s1-meaning"></div>
           <div class="card-example" id="s1-example"></div>
         </div>
       </div>
     </div>
-    <div class="toggle-lang">
-      <span>한글 먼저</span>
-      <div class="toggle-switch" id="lang-toggle" onclick="toggleLang()">
-        <div class="toggle-knob"></div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;width:min(680px,calc(100vw - 32px));margin-top:12px;">
+      <span style="font-size:12px;color:var(--red);">← 모름</span>
+      <div class="toggle-lang" style="margin:0;">
+        <span>한글 먼저</span>
+        <div class="toggle-switch" id="lang-toggle" onclick="toggleLang()">
+          <div class="toggle-knob"></div>
+        </div>
+        <span>영어 먼저</span>
       </div>
-      <span>영어 먼저</span>
+      <span style="font-size:12px;color:var(--green);">알아! →</span>
     </div>
+
     <div class="card-actions">
       <button class="action-btn action-prev" onclick="prevCard()" title="이전">←</button>
       <button class="action-btn action-sound" onclick="speakCurrent()" title="발음">🔊</button>
@@ -1071,9 +1138,12 @@
       <span class="swipe-right">알아! →</span>
     </div>
     <div class="leitner-card-wrap" id="s2-card-wrap">
-      <div class="leitner-card" id="s2-card" onclick="flipLeitner()">
+      <div class="leitner-card" id="s2-card">
+        <div class="lc-swipe-label label-left"  id="s2-label-left">✗ 모름</div>
+        <div class="lc-swipe-label label-right" id="s2-label-right">✓ 알아!</div>
+        <div class="lc-swipe-label label-up"    id="s2-label-up">△ 애매</div>
         <div class="lc-word" id="s2-word"></div>
-        <div class="lc-tap">탭하여 뒤집기</div>
+        <div class="lc-tap" id="s2-tap">탭하여 뒤집기</div>
       </div>
     </div>
     <div class="leitner-btns">
@@ -1153,9 +1223,12 @@
       <span class="swipe-right">알아! →</span>
     </div>
     <div class="leitner-card-wrap" id="s3-card-wrap">
-      <div class="leitner-card" id="s3-card" onclick="flipLeitner3()">
+      <div class="leitner-card" id="s3-card">
+        <div class="lc-swipe-label label-left"  id="s3-label-left">✗ 모름</div>
+        <div class="lc-swipe-label label-right" id="s3-label-right">✓ 알아!</div>
+        <div class="lc-swipe-label label-up"    id="s3-label-up">△ 애매</div>
         <div class="lc-word" id="s3-word"></div>
-        <div class="lc-tap">탭하여 뒤집기</div>
+        <div class="lc-tap" id="s3-tap">탭하여 뒤집기</div>
       </div>
     </div>
     <div class="leitner-btns">
@@ -1535,11 +1608,127 @@ function startStage(n) {
   else if (n === 3) startStage3();
 }
 
+// ══════════════════════════════════════════
+// 공통 스와이프 엔진 (마우스 + 터치)
+// ══════════════════════════════════════════
+function initSwipe(el, onSwipe, onTap, labelIds) {
+  let startX=0, startY=0, curX=0, curY=0, isDragging=false, moved=false;
+  const THRESHOLD = 80, ROT_MAX = 18;
+
+  function getLabel(dir) {
+    if (!labelIds) return null;
+    return document.getElementById(labelIds[dir]);
+  }
+  function showLabel(dir) {
+    ['left','right','up'].forEach(d => {
+      const l = getLabel(d);
+      if (l) l.style.opacity = d === dir ? '1' : '0';
+    });
+  }
+  function hideLabels() {
+    ['left','right','up'].forEach(d => { const l=getLabel(d); if(l) l.style.opacity='0'; });
+  }
+  function move(dx, dy) {
+    const rot = (dx / window.innerWidth) * ROT_MAX;
+    el.style.transform = `translate(${dx}px, ${dy}px) rotate(${rot}deg)`;
+    const absDx = Math.abs(dx), absDy = Math.abs(dy);
+    if (absDx > 30 && absDx > absDy) showLabel(dx > 0 ? 'right' : 'left');
+    else if (dy < -40 && absDy > absDx) showLabel('up');
+    else hideLabels();
+  }
+  function reset(animate) {
+    el.style.transition = animate ? 'transform .3s' : '';
+    el.style.transform = '';
+    hideLabels();
+    setTimeout(() => el.style.transition = '', 300);
+  }
+  function commit(dx, dy) {
+    const absDx = Math.abs(dx), absDy = Math.abs(dy);
+    let dir = null;
+    if (absDx > THRESHOLD && absDx > absDy) dir = dx > 0 ? 'right' : 'left';
+    else if (dy < -THRESHOLD && absDy > absDx) dir = 'up';
+
+    if (dir) {
+      const tx = dir==='right'?600:dir==='left'?-600:0;
+      const ty = dir==='up'?-400:0;
+      const rot = dir==='right'?25:dir==='left'?-25:0;
+      el.style.transition = 'transform .32s cubic-bezier(.4,0,.2,1), opacity .32s';
+      el.style.transform = `translate(${tx}px,${ty}px) rotate(${rot}deg)`;
+      el.style.opacity = '0';
+      hideLabels();
+      setTimeout(() => {
+        el.style.transition=''; el.style.transform=''; el.style.opacity='1';
+        onSwipe(dir);
+      }, 340);
+    } else {
+      reset(true);
+    }
+  }
+
+  // 마우스
+  el.addEventListener('mousedown', e => {
+    if (e.target.closest('button')) return;
+    isDragging=true; moved=false;
+    startX=e.clientX; startY=e.clientY;
+    el.style.transition='none';
+  });
+  window.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    curX=e.clientX; curY=e.clientY;
+    const dx=curX-startX, dy=curY-startY;
+    if (Math.abs(dx)>4||Math.abs(dy)>4) moved=true;
+    if (moved) move(dx, dy);
+  });
+  window.addEventListener('mouseup', e => {
+    if (!isDragging) return;
+    isDragging=false;
+    const dx=curX-startX, dy=curY-startY;
+    if (!moved) { onTap && onTap(); return; }
+    commit(dx, dy);
+  });
+
+  // 터치
+  el.addEventListener('touchstart', e => {
+    if (e.target.closest('button')) return;
+    isDragging=true; moved=false;
+    startX=e.touches[0].clientX; startY=e.touches[0].clientY;
+    el.style.transition='none';
+  }, {passive:true});
+  el.addEventListener('touchmove', e => {
+    if (!isDragging) return;
+    curX=e.touches[0].clientX; curY=e.touches[0].clientY;
+    const dx=curX-startX, dy=curY-startY;
+    if (Math.abs(dx)>6||Math.abs(dy)>6) { moved=true; e.preventDefault(); }
+    if (moved) move(dx, dy);
+  }, {passive:false});
+  el.addEventListener('touchend', e => {
+    if (!isDragging) return;
+    isDragging=false;
+    const dx=curX-startX, dy=curY-startY;
+    if (!moved) { onTap && onTap(); return; }
+    commit(dx, dy);
+  });
+}
+
+// ══════════════════════════════════════════
+// 1차 학습 (플래시카드)
+// ══════════════════════════════════════════
 function startStage1() {
   state.s1Idx = 0; state.s1Flipped = false; state.s1LangEn = true;
   document.getElementById('lang-toggle').classList.remove('on');
   showScreen('screen-stage1');
   renderCard1();
+  // 스와이프: 1차 학습은 좌=이전, 우=다음 (단순 넘기기)
+  const scene = document.getElementById('s1-card-scene');
+  initSwipe(scene,
+    (dir) => {
+      if (dir === 'right') nextCard();
+      else if (dir === 'left') prevCard();
+      else if (dir === 'up') { toggleStar(); showToast('별표 표시! ★'); }
+    },
+    () => flipCard(),
+    { left:'si-left', right:'si-right', up:'si-up' }
+  );
 }
 function renderCard1() {
   const words = state.currentUnit.words;
@@ -1559,8 +1748,10 @@ function renderCard1() {
   const inner = document.getElementById('s1-card-inner');
   inner.classList.remove('flipped'); state.s1Flipped = false;
   const starred = state.s1Stars.has(state.s1Idx);
-  document.getElementById('s1-star').textContent = starred ? '★' : '☆';
-  document.getElementById('s1-star').classList.toggle('starred', starred);
+  ['s1-star','s1-star-back'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){ el.textContent = starred ? '★' : '☆'; el.classList.toggle('starred', starred); }
+  });
   if (state.s1LangEn) speakWord(w.en);
 }
 function flipCard() {
@@ -1577,11 +1768,14 @@ function toggleStar() {
   if (state.s1Stars.has(state.s1Idx)) state.s1Stars.delete(state.s1Idx);
   else state.s1Stars.add(state.s1Idx);
   const starred = state.s1Stars.has(state.s1Idx);
-  document.getElementById('s1-star').textContent = starred ? '★' : '☆';
-  document.getElementById('s1-star').classList.toggle('starred', starred);
+  ['s1-star','s1-star-back'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){ el.textContent = starred ? '★' : '☆'; el.classList.toggle('starred', starred); }
+  });
 }
 function prevCard() {
   if (state.s1Idx > 0) { state.s1Idx--; renderCard1(); }
+  else showToast('첫 번째 카드입니다!');
 }
 function nextCard() {
   const words = state.currentUnit.words;
@@ -1606,21 +1800,26 @@ function startStage2() {
   state.s2Left = []; state.s2Current = [...words]; state.s2Flipped = false;
   showScreen('screen-stage2');
   renderLeitner();
+  // 스와이프 초기화
+  const card = document.getElementById('s2-card');
+  initSwipe(card,
+    (dir) => leitnerSwipe(dir === 'up' ? 'top' : dir),
+    () => flipLeitner(),
+    { left:'s2-label-left', right:'s2-label-right', up:'s2-label-up' }
+  );
 }
 function renderLeitner() {
   updateS2Counts();
   if (state.s2Current.length === 0) {
-    if (state.s2Top.length > 0) { state.s2Current = [...state.s2Top]; state.s2Top = []; renderLeitner(); return; }
-    if (state.s2Left.length > 0) { state.s2Current = [...state.s2Left]; state.s2Left = []; renderLeitner(); return; }
-    // 회독 완료
+    if (state.s2Top.length > 0) { state.s2Current = [...state.s2Top]; state.s2Top = []; setTimeout(renderLeitner,100); return; }
+    if (state.s2Left.length > 0) { state.s2Current = [...state.s2Left]; state.s2Left = []; setTimeout(renderLeitner,100); return; }
     if (state.s2Round < 3) {
       state.s2Round++;
       state.s2Current = [...state.currentUnit.words];
       state.s2Right = []; state.s2Top = []; state.s2Left = [];
       showToast(`${state.s2Round-1}회독 완료! ${state.s2Round}회독 시작 🔄`);
-      renderLeitner(); return;
+      setTimeout(renderLeitner, 400); return;
     }
-    // 2차 완료
     state.stage2Done[state.currentUnit.id] = true;
     saveUserProgress();
     showToast('2차 학습 완료! 이제 철자 학습으로 🎓');
@@ -1631,40 +1830,50 @@ function renderLeitner() {
   document.getElementById('s2-round-label').textContent = `${state.s2Round}회독`;
   const w = state.s2Current[0];
   const card = document.getElementById('s2-card');
-  card.innerHTML = `<div class="lc-word" style="font-size:26px;font-weight:900;">${w.en}</div><div class="lc-tap" style="font-size:12px;color:#94a3b8;margin-top:8px;">탭하여 뜻 확인</div>`;
+  // 라벨 유지, 내용만 교체
+  card.querySelector('#s2-word') 
+    ? (card.querySelector('#s2-word').textContent = w.en, card.querySelector('#s2-tap').textContent = '탭하여 뜻 확인')
+    : null;
+  // innerHTML로 내용 업데이트 (라벨 div는 유지)
+  const labels = card.querySelectorAll('.lc-swipe-label');
+  card.innerHTML = '';
+  labels.forEach(l => { l.style.opacity='0'; card.appendChild(l); });
+  const wordDiv = document.createElement('div');
+  wordDiv.className = 'lc-word'; wordDiv.id = 's2-word'; wordDiv.textContent = w.en;
+  const tapDiv = document.createElement('div');
+  tapDiv.className = 'lc-tap'; tapDiv.id = 's2-tap'; tapDiv.textContent = '탭하여 뜻 확인';
+  card.appendChild(wordDiv); card.appendChild(tapDiv);
   card.classList.remove('flipped-card');
   state.s2Flipped = false;
   speakWord(w.en);
 }
 function flipLeitner() {
   state.s2Flipped = !state.s2Flipped;
+  if (!state.s2Current.length) return;
   const w = state.s2Current[0];
   const card = document.getElementById('s2-card');
+  const labels = card.querySelectorAll('.lc-swipe-label');
+  card.innerHTML = '';
+  labels.forEach(l => card.appendChild(l));
   if (state.s2Flipped) {
     card.classList.add('flipped-card');
-    card.innerHTML = `<div class="lc-meaning" style="font-size:22px;font-weight:700;">${w.ko}</div><div style="font-size:12px;color:#64748b;margin-top:6px;">${w.en}</div>`;
+    const md = document.createElement('div'); md.className='lc-meaning'; md.textContent=w.ko; card.appendChild(md);
+    const sd = document.createElement('div'); sd.style.cssText='font-size:14px;color:#64748b;margin-top:8px;'; sd.textContent=w.en; card.appendChild(sd);
+    const td = document.createElement('div'); td.className='lc-tap'; td.textContent='스와이프로 분류하세요'; card.appendChild(td);
   } else {
     card.classList.remove('flipped-card');
-    card.innerHTML = `<div class="lc-word" style="font-size:26px;font-weight:900;">${w.en}</div><div class="lc-tap" style="font-size:12px;color:#94a3b8;margin-top:8px;">탭하여 뜻 확인</div>`;
+    const wd = document.createElement('div'); wd.className='lc-word'; wd.id='s2-word'; wd.textContent=w.en; card.appendChild(wd);
+    const td = document.createElement('div'); td.className='lc-tap'; td.id='s2-tap'; td.textContent='탭하여 뜻 확인'; card.appendChild(td);
     speakWord(w.en);
   }
 }
 function leitnerSwipe(dir) {
   if (state.s2Current.length === 0) return;
   const w = state.s2Current.shift();
-  const card = document.getElementById('s2-card');
-  const tx = dir === 'right' ? 300 : dir === 'left' ? -300 : 0;
-  const ty = dir === 'top' ? -200 : 0;
-  card.style.transition = 'transform .3s, opacity .3s';
-  card.style.transform = `translate(${tx}px, ${ty}px)`;
-  card.style.opacity = '0';
   if (dir === 'right') state.s2Right.push(w);
   else if (dir === 'top') state.s2Top.push(w);
   else state.s2Left.push(w);
-  setTimeout(() => {
-    card.style.transition = ''; card.style.transform = ''; card.style.opacity = '1';
-    renderLeitner();
-  }, 320);
+  setTimeout(renderLeitner, 360);
 }
 function updateS2Counts() {
   document.getElementById('s2-queue').textContent = state.s2Current.length;
@@ -1836,6 +2045,12 @@ function startStage3() {
   state.s3Flipped = false;
   showScreen('screen-stage3');
   renderStage3();
+  const card = document.getElementById('s3-card');
+  initSwipe(card,
+    (dir) => leitner3Swipe(dir === 'up' ? 'top' : dir),
+    () => flipLeitner3(),
+    { left:'s3-label-left', right:'s3-label-right', up:'s3-label-up' }
+  );
 }
 function renderStage3() {
   updateS3Counts();
@@ -1845,15 +2060,18 @@ function renderStage3() {
       state.s3Queue = [...state.s3Wrong]; state.s3Wrong = [];
       state.s3Round++;
       showToast(`${state.s3Round}라운드 시작! 💪`);
-      renderStage3(); return;
+      setTimeout(renderStage3, 400); return;
     }
-    // 완료
     finishStage3(); return;
   }
   document.getElementById('s3-round').textContent = state.s3Round;
   const w = state.s3Queue[0];
   const card = document.getElementById('s3-card');
-  card.innerHTML = `<div class="lc-word" style="font-size:26px;font-weight:900;">${w.en}</div><div class="lc-tap" style="font-size:12px;color:#94a3b8;margin-top:8px;">탭하여 뜻 확인</div>`;
+  const labels = card.querySelectorAll('.lc-swipe-label');
+  card.innerHTML = '';
+  labels.forEach(l => { l.style.opacity='0'; card.appendChild(l); });
+  const wd = document.createElement('div'); wd.className='lc-word'; wd.id='s3-word'; wd.textContent=w.en; card.appendChild(wd);
+  const td = document.createElement('div'); td.className='lc-tap'; td.id='s3-tap'; td.textContent='탭하여 뒤집기'; card.appendChild(td);
   card.classList.remove('flipped-card');
   state.s3Flipped = false;
   speakWord(w.en);
@@ -1861,14 +2079,21 @@ function renderStage3() {
 }
 function flipLeitner3() {
   state.s3Flipped = !state.s3Flipped;
+  if (!state.s3Queue.length) return;
   const w = state.s3Queue[0];
   const card = document.getElementById('s3-card');
+  const labels = card.querySelectorAll('.lc-swipe-label');
+  card.innerHTML = '';
+  labels.forEach(l => card.appendChild(l));
   if (state.s3Flipped) {
     card.classList.add('flipped-card');
-    card.innerHTML = `<div class="lc-meaning" style="font-size:22px;font-weight:700;">${w.ko}</div><div style="font-size:12px;color:#64748b;margin-top:6px;">${w.en}</div>`;
+    const md = document.createElement('div'); md.className='lc-meaning'; md.textContent=w.ko; card.appendChild(md);
+    const sd = document.createElement('div'); sd.style.cssText='font-size:14px;color:#64748b;margin-top:8px;'; sd.textContent=w.en; card.appendChild(sd);
+    const td2 = document.createElement('div'); td2.className='lc-tap'; td2.textContent='스와이프로 분류'; card.appendChild(td2);
   } else {
     card.classList.remove('flipped-card');
-    card.innerHTML = `<div class="lc-word" style="font-size:26px;font-weight:900;">${w.en}</div><div class="lc-tap" style="font-size:12px;color:#94a3b8;margin-top:8px;">탭하여 뜻 확인</div>`;
+    const wd2 = document.createElement('div'); wd2.className='lc-word'; wd2.id='s3-word'; wd2.textContent=w.en; card.appendChild(wd2);
+    const td2 = document.createElement('div'); td2.className='lc-tap'; td2.id='s3-tap'; td2.textContent='탭하여 뒤집기'; card.appendChild(td2);
   }
 }
 function startTimer3() {
@@ -1892,24 +2117,15 @@ function leitner3Swipe(dir) {
   clearInterval(state.s3TimerInterval);
   if (state.s3Queue.length === 0) return;
   const w = state.s3Queue.shift();
-  const card = document.getElementById('s3-card');
-  const tx = dir === 'right' ? 300 : dir === 'left' ? -300 : 0;
-  const ty = dir === 'top' ? -200 : 0;
-  card.style.transition = 'transform .3s, opacity .3s';
-  card.style.transform = `translate(${tx}px, ${ty}px)`;
-  card.style.opacity = '0';
   if (dir === 'right') {
     state.s3Right.push(w);
   } else {
     state.s3Wrong.push(w);
-    if (state.s3Round === 1) state.s3FirstWrong.push(w); // 1라운드 오답 기록
-    // 메타인지 오류: 알아!로 보냈으나 나중에 틀린 경우 (여기서는 top을 메타인지 애매로 간주)
+    if (state.s3Round === 1) state.s3FirstWrong.push(w);
     if (dir === 'top') state.s3MetaWrong.push(w);
   }
-  setTimeout(() => {
-    card.style.transition = ''; card.style.transform = ''; card.style.opacity = '1';
-    renderStage3();
-  }, 320);
+  // 애니메이션은 initSwipe가 처리, 360ms 후 렌더
+  setTimeout(renderStage3, 360);
 }
 function updateS3Counts() {
   document.getElementById('s3-queue').textContent = state.s3Queue.length;
