@@ -2134,46 +2134,82 @@ function speakSpell() {
 // 3차 학습 (타임어택)
 // ═══════════════════════════════════════════════
 function startStage3() {
+  clearInterval(state.s3TimerInterval);
   state.s3Round = 1;
   state.s3Right = []; state.s3Wrong = [];
   state.s3Queue = [...state.currentUnit.words];
   state.s3FirstWrong = []; state.s3MetaWrong = [];
   state.s3Flipped = false;
   showScreen('screen-stage3');
-  renderStage3();
-  const card = document.getElementById('s3-card');
-  initSwipe(card,
-    (dir) => leitner3Swipe(dir === 'up' ? 'top' : dir),
-    () => flipLeitner3(),
-    { left:'s3-label-left', right:'s3-label-right', up:'s3-label-up' }
-  );
+  // initSwipe 등록 (화면 전환 후 DOM 준비되면 바인딩)
+  requestAnimationFrame(() => {
+    const card = document.getElementById('s3-card');
+    initSwipe(card,
+      (dir) => leitner3Swipe(dir === 'up' ? 'top' : dir),
+      () => flipLeitner3(),
+      { left:'s3-label-left', right:'s3-label-right', up:'s3-label-up' }
+    );
+    renderStage3();
+  });
 }
+
+function startTimer3() {
+  clearInterval(state.s3TimerInterval);
+  state.s3TimeLeft = 3.0;
+  updateTimebar(3.0);
+  state.s3TimerInterval = setInterval(() => {
+    state.s3TimeLeft = Math.max(0, state.s3TimeLeft - 0.1);
+    updateTimebar(state.s3TimeLeft);
+    if (state.s3TimeLeft <= 0) {
+      clearInterval(state.s3TimerInterval);
+      leitner3Swipe('left');
+    }
+  }, 100);
+}
+
+function updateTimebar(t) {
+  const pct = Math.max(0, (t / 3.0) * 100);
+  const bar  = document.getElementById('timebar');
+  const secs = document.getElementById('timebar-secs');
+  if (bar)  bar.style.width   = pct + '%';
+  if (secs) secs.textContent  = Math.max(0, t).toFixed(1);
+}
+
 function renderStage3() {
   updateS3Counts();
   clearInterval(state.s3TimerInterval);
+
   if (state.s3Queue.length === 0) {
     if (state.s3Wrong.length > 0) {
       state.s3Queue = [...state.s3Wrong]; state.s3Wrong = [];
       state.s3Round++;
       showToast(`${state.s3Round}라운드 시작! 💪`);
-      setTimeout(renderStage3, 400); return;
+      setTimeout(renderStage3, 500); return;
     }
     finishStage3(); return;
   }
+
   document.getElementById('s3-round').textContent = state.s3Round;
   const w = state.s3Queue[0];
+
   // flip 리셋 (앞면)
   const inner = document.getElementById('s3-inner');
   if (inner) inner.classList.remove('lc-flipped');
   state.s3Flipped = false;
-  const wordEl = document.getElementById('s3-word');
+
+  // 내용 업데이트
+  const wordEl    = document.getElementById('s3-word');
   const meaningEl = document.getElementById('s3-meaning-back');
-  if (wordEl) wordEl.textContent = w.en;
+  if (wordEl)    wordEl.textContent    = w.en;
   if (meaningEl) meaningEl.textContent = w.ko;
-  document.querySelectorAll('#s3-card .lc-swipe-label').forEach(l => l.style.opacity='0');
+
+  document.querySelectorAll('#s3-card .lc-swipe-label')
+    .forEach(l => l.style.opacity = '0');
+
   speakWord(w.en);
   startTimer3();
 }
+
 function flipLeitner3() {
   if (!state.s3Queue.length) return;
   state.s3Flipped = !state.s3Flipped;
@@ -2192,8 +2228,7 @@ function leitner3Swipe(dir) {
     if (state.s3Round === 1) state.s3FirstWrong.push(w);
     if (dir === 'top') state.s3MetaWrong.push(w);
   }
-  // 애니메이션은 initSwipe가 처리, 360ms 후 렌더
-  setTimeout(renderStage3, 360);
+  setTimeout(renderStage3, 380);
 }
 function updateS3Counts() {
   document.getElementById('s3-queue').textContent = state.s3Queue.length;
@@ -2314,6 +2349,7 @@ function startMatch() {
     items.push({id:w.en, text:w.ko,  type:'ko', matched:false, gone:false});
   });
   state.matchItems = items.sort(() => Math.random()-.5);
+  state.matchSetCount = 1;
   state.matchSelected = null; state.matchElapsed = 0; state.matchLocked = false;
   const best = localStorage.getItem('eden_match_best_'+state.currentUnit.id);
   document.getElementById('match-best').textContent = best ? best+'초' : '-';
@@ -2350,6 +2386,30 @@ function renderMatch() {
     grid.appendChild(tile);
   });
 }
+function loadNextMatchSet() {
+  // 전체 단어풀에서 새 6쌍 (이전과 다르게 섞기)
+  const pool = state.currentUnit.words.slice().sort(() => Math.random()-.5);
+  const pick = pool.slice(0, Math.min(6, pool.length));
+  const items = [];
+  pick.forEach(w => {
+    items.push({id:w.en, text:w.en, type:'en', matched:false, gone:false});
+    items.push({id:w.en, text:w.ko,  type:'ko', matched:false, gone:false});
+  });
+  state.matchItems = items.sort(() => Math.random()-.5);
+  state.matchSelected = null; state.matchLocked = false;
+  // 타이머는 계속 누적
+  requestAnimationFrame(() => {
+    const header = document.querySelector('#screen-match .stage-header');
+    const avail  = window.innerHeight - (header ? header.offsetHeight : 56) - 22;
+    const rows   = Math.ceil(state.matchItems.length / 3);
+    document.getElementById('match-grid').style.gridTemplateRows =
+      `repeat(${rows}, ${Math.floor(avail / rows)}px)`;
+    document.getElementById('match-best').textContent =
+      `세트 ${state.matchSetCount}`;
+  });
+  renderMatch();
+}
+
 function selectMatchTile(idx) {
   if (state.matchLocked) return;
   const item = state.matchItems[idx];
@@ -2386,14 +2446,11 @@ function selectMatchTile(idx) {
       state.matchLocked = false;
       renderMatch();
       if (state.matchItems.every(i => i.gone)) {
-        clearInterval(state.matchTimerInt);
+        // 12개 완료 → 바로 다음 12개 로드 (단어 무한 순환)
+        state.matchSetCount = (state.matchSetCount || 1) + 1;
         const t = state.matchElapsed.toFixed(1);
-        const best = localStorage.getItem('eden_match_best_'+state.currentUnit.id);
-        if (!best || parseFloat(t) < parseFloat(best)) {
-          localStorage.setItem('eden_match_best_'+state.currentUnit.id, t);
-        }
-        showToast(`완료! ${t}초 🎯`);
-        setTimeout(() => showScreen('screen-mode'), 1600);
+        showToast(`세트 완료! ${t}초 ⚡ 다음 세트 준비 중...`);
+        setTimeout(() => loadNextMatchSet(), 900);
       }
     }, 460);
   } else {
@@ -2507,21 +2564,26 @@ function hitAsteroid(a) {
     blastScore += 10;
     document.getElementById('blast-score').textContent = blastScore;
     showToast('정답! +10점 💥');
-    // 즉시 다음 문제로 — 폭발 애니(약 0.3s) 후 바로 전환
+    // 나머지 소행성도 모두 즉시 사라지게
     setTimeout(() => {
+      blastAsteroids.forEach(b => { if (!b.exploding) b.gone = true; });
       blastAnswered = false;
       nextBlastQuestion();
-    }, 320);
+    }, 280);
   } else {
     blastScore = Math.max(0, blastScore - 5);
     document.getElementById('blast-score').textContent = blastScore;
     showToast('오답! -5점 ❌');
-    setTimeout(() => { blastAnswered = false; }, 500);
+    setTimeout(() => { blastAnswered = false; }, 400);
   }
 }
 
 function nextBlastQuestion() {
-  if (blastQIdx >= blastQWords.length) blastQIdx = 0;
+  if (blastQIdx >= blastQWords.length) {
+    // 전부 돌면 다시 섞어서 무한 반복
+    blastQWords = [...state.currentUnit.words].sort(() => Math.random() - .5);
+    blastQIdx = 0;
+  }
   blastCurrentQ = blastQWords[blastQIdx++];
   document.getElementById('blast-question').textContent = blastCurrentQ.ko;
   speakWord(blastCurrentQ.en);
@@ -2662,6 +2724,16 @@ function blastLoop() {
   });
 
   blastAsteroids = blastAsteroids.filter(a => !a.gone);
+
+  // 활성 소행성이 0개고 정답 처리 중이 아니면 즉시 다음 문제
+  if (blastAsteroids.length === 0 && !blastAnswered) {
+    blastAnswered = true; // 중복 방지
+    setTimeout(() => {
+      blastAnswered = false;
+      nextBlastQuestion();
+    }, 200);
+  }
+
   blastAnimId = requestAnimationFrame(blastLoop);
 }
 
