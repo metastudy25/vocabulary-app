@@ -1401,7 +1401,7 @@
       <div class="blast-score">⭐ <span id="blast-score">0</span>점</div>
       <div style="display:flex;align-items:center;gap:5px;">
         <span style="font-size:10px;color:rgba(255,255,255,.6);">한글</span>
-        <label style="position:relative;display:inline-block;width:34px;height:18px;cursor:pointer;">
+        <label style="position:relative;display:inline-block;width:34px;height:18px;cursor:pointer;pointer-events:auto;">
           <input type="checkbox" id="blast-dir-toggle" onchange="toggleBlastDir()" style="opacity:0;width:0;height:0;">
           <span style="position:absolute;inset:0;background:rgba(35,72,112,.8);border-radius:18px;transition:.2s;"></span>
           <span id="blast-dir-knob" style="position:absolute;left:2px;top:2px;width:14px;height:14px;background:#c9a24b;border-radius:50%;transition:.2s;"></span>
@@ -2905,6 +2905,7 @@ function hitAsteroid(a) {
     blastScore += 10;
     document.getElementById('blast-score').textContent = blastScore;
     showToast('정답! +10점 💥');
+    speakWord(blastCurrentQ.en);  // 정답 맞췄을 때 발음
     // 나머지 소행성도 모두 즉시 사라지게
     setTimeout(() => {
       blastAsteroids.forEach(b => { if (!b.exploding) b.gone = true; });
@@ -2929,7 +2930,7 @@ function nextBlastQuestion() {
   // blastDir: 'en2ko' → 한글 질문/영어 소행성, 'ko2en' → 영어 질문/한글 소행성
   document.getElementById('blast-question').textContent =
     state.blastDir === 'ko2en' ? blastCurrentQ.en : blastCurrentQ.ko;
-  speakWord(blastCurrentQ.en);
+  // 처음 제시할 때는 발음 없음 (정답 맞췄을 때만 발음)
   spawnAsteroids();
 }
 
