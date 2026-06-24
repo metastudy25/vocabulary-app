@@ -2800,11 +2800,20 @@ function toggleBlastDir() {
   state.blastDir = state.blastDir === 'en2ko' ? 'ko2en' : 'en2ko';
   const knob = document.getElementById('blast-dir-knob');
   if (knob) knob.style.left = state.blastDir === 'en2ko' ? '2px' : '18px';
-  // 현재 질문 표시 갱신
+  // 질문 텍스트 즉시 갱신
   if (blastCurrentQ) {
     const qEl = document.getElementById('blast-question');
-    if (qEl) qEl.textContent = state.blastDir === 'en2ko' ? blastCurrentQ.ko : blastCurrentQ.en;
+    if (qEl) qEl.textContent = state.blastDir === 'ko2en' ? blastCurrentQ.en : blastCurrentQ.ko;
   }
+  // 현재 화면의 소행성 텍스트도 즉시 갱신
+  blastAsteroids.forEach(a => {
+    if (a.gone || a.exploding) return;
+    // word 필드를 방향에 맞게 교체
+    const wordObj = state.currentUnit.words.find(w => w.en === a._en);
+    if (wordObj) {
+      a.word = state.blastDir === 'ko2en' ? wordObj.ko : wordObj.en;
+    }
+  });
 }
 
 function startBlast() {
@@ -2942,6 +2951,7 @@ function spawnAsteroids() {
       vy: Math.sin(angle) * speed,
       r,
       word: state.blastDir === 'ko2en' ? w.ko : w.en,
+      _en: w.en,  // 방향 전환 시 참조용 원본 영어 단어
       isAnswer: w.en === blastCurrentQ.en,
       exploding: false, expFrame: 0, gone: false,
       bounced: false   // 벽 반사 횟수
