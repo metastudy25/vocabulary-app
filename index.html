@@ -2852,6 +2852,9 @@ function startBlast() {
   blastCanvas.parentNode.replaceChild(nc, blastCanvas);
   blastCanvas = nc;
   blastCtx = blastCanvas.getContext('2d');
+  // cloneNode 후 canvas 크기 재설정 (width/height가 0이 되는 문제 방지)
+  blastCanvas.width = blastCanvas.offsetWidth || window.innerWidth;
+  blastCanvas.height = blastCanvas.offsetHeight || window.innerHeight;
 
   blastCanvas.addEventListener('mousemove', e => {
     const r = blastCanvas.getBoundingClientRect();
@@ -2936,7 +2939,8 @@ function spawnAsteroids() {
     .sort(() => Math.random()-.5).slice(0, 4);
   const all = [...pool, blastCurrentQ].sort(() => Math.random()-.5);
   const W = blastCanvas.width, H = blastCanvas.height;
-  const r_base = Math.min(56, W / 7);
+  // ko2en 모드(한글이 소행성에 표시)일 때 소행성 크기 확대
+  const r_base = state.blastDir === 'ko2en' ? Math.min(64, W / 6) : Math.min(56, W / 7);
   const cx = W / 2, cy = H / 2;  // 화면 중앙에서 퍼져나감
 
   // 5방향으로 균등하게 퍼짐 (각도 간격 72도)
@@ -3052,13 +3056,14 @@ function blastLoop() {
     blastCtx.textBaseline = 'middle';
     blastCtx.shadowColor = 'rgba(0,0,0,.95)';
     blastCtx.shadowBlur = 8;
-    // 폰트를 줄여가며 a.r*1.8 너비 안에 들어올 때까지 시도
-    let fontSize = Math.min(20, Math.floor(a.r * 0.42));
-    const maxWidth = a.r * 1.75;
-    blastCtx.font = `900 ${fontSize}px Arial`;
-    while (fontSize > 8 && blastCtx.measureText(a.word).width > maxWidth) {
+    // 한글/영어 모두 지원하는 폰트, 크기 자동 조절
+    const fontFamily = "'Noto Sans KR', Arial, sans-serif";
+    let fontSize = Math.min(18, Math.floor(a.r * 0.40));
+    const maxWidth = a.r * 1.85;
+    blastCtx.font = `700 ${fontSize}px ${fontFamily}`;
+    while (fontSize > 7 && blastCtx.measureText(a.word).width > maxWidth) {
       fontSize--;
-      blastCtx.font = `900 ${fontSize}px Arial`;
+      blastCtx.font = `700 ${fontSize}px ${fontFamily}`;
     }
     blastCtx.fillText(a.word, a.x, a.y);
     blastCtx.shadowBlur = 0;
