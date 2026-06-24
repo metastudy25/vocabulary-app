@@ -1355,12 +1355,15 @@
   <div class="stage-header">
     <button class="btn-back" onclick="showScreen('screen-mode')">←</button>
     <div class="stage-title-text">학습하기 · 4지선다</div>
-    <div style="display:flex;align-items:center;gap:8px;margin-left:auto;">
-      <button id="learn-dir-btn" onclick="toggleLearnDir()"
-        style="background:rgba(201,162,75,.15);border:1px solid var(--gold);color:var(--gold);
-               border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;
-               cursor:pointer;white-space:nowrap;">영→한</button>
-      <div class="stage-progress-text" id="learn-progress"></div>
+    <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+      <span style="font-size:11px;color:var(--gray-400);">한글 먼저</span>
+      <label style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;">
+        <input type="checkbox" id="learn-dir-toggle" onchange="toggleLearnDir()" style="opacity:0;width:0;height:0;">
+        <span style="position:absolute;inset:0;background:#234870;border-radius:20px;transition:.2s;"></span>
+        <span id="learn-dir-knob" style="position:absolute;left:3px;top:3px;width:14px;height:14px;background:#c9a24b;border-radius:50%;transition:.2s;"></span>
+      </label>
+      <span style="font-size:11px;color:var(--gray-400);">영어 먼저</span>
+      <div class="stage-progress-text" id="learn-progress" style="margin-left:8px;"></div>
     </div>
   </div>
   <div class="learn-area">
@@ -2588,16 +2591,18 @@ function startLearn() {
   state.learnTotal = words.length;
   if (!state.learnDir) state.learnDir = 'en2ko';
   showScreen('screen-learn');
-  // 버튼 상태 업데이트
-  const btn = document.getElementById('learn-dir-btn');
-  if (btn) btn.textContent = state.learnDir === 'en2ko' ? '영→한' : '한→영';
+  // 슬라이더 초기화
+  const toggle = document.getElementById('learn-dir-toggle');
+  const knob   = document.getElementById('learn-dir-knob');
+  if (toggle) toggle.checked = (state.learnDir === 'en2ko');
+  if (knob)   knob.style.left = state.learnDir === 'en2ko' ? '3px' : '19px';
   renderLearn();
 }
 function toggleLearnDir() {
   state.learnDir = state.learnDir === 'en2ko' ? 'ko2en' : 'en2ko';
-  const btn = document.getElementById('learn-dir-btn');
-  if (btn) btn.textContent = state.learnDir === 'en2ko' ? '영→한' : '한→영';
-  // 현재 큐 유지하고 화면만 새로 그리기
+  const knob = document.getElementById('learn-dir-knob');
+  if (knob) knob.style.left = state.learnDir === 'en2ko' ? '3px' : '19px';
+  // 방향 바뀌면 큐 리셋 후 재시작
   const words = state.currentUnit.words;
   state.learnQueue = [...words];
   state.learnCorrect = 0;
@@ -2612,9 +2617,28 @@ function renderLearn() {
   }
   const idx = Math.floor(Math.random() * state.learnQueue.length);
   const q = state.learnQueue[idx];
-  const others = state.currentUnit.words.filter(w => w.en !== q.en).sort(() => Math.random()-.5).slice(0,3);
-  const opts = [...others, q].sort(() => Math.random()-.5);
   const dir = state.learnDir || 'en2ko';
+
+  // 뜻이 겹치는 단어 제외 (정답이 2개 이상 되지 않도록)
+  // en2ko: 한글 뜻 기준으로 겹침 체크
+  // ko2en: 한글 뜻이 같으면 영어 단어가 달라도 정답이 될 수 있으므로 제외
+  const qKoTokens = q.ko.replace(/[,·\/]/g, ' ').split(/\s+/).map(s => s.trim()).filter(Boolean);
+
+  const nonOverlapping = state.currentUnit.words.filter(w => {
+    if (w.en === q.en) return false;  // 정답 자체 제외
+    // 상대방 단어의 뜻 토큰
+    const wKoTokens = w.ko.replace(/[,·\/]/g, ' ').split(/\s+/).map(s => s.trim()).filter(Boolean);
+    // 한 토큰이라도 겹치면 제외
+    return !qKoTokens.some(t => t.length >= 2 && wKoTokens.includes(t));
+  });
+
+  // 비겹침 단어가 3개 미만이면 그냥 en 기준으로 다른 단어 사용
+  const pool = nonOverlapping.length >= 3
+    ? nonOverlapping
+    : state.currentUnit.words.filter(w => w.en !== q.en);
+
+  const others = pool.sort(() => Math.random()-.5).slice(0, 3);
+  const opts = [...others, q].sort(() => Math.random()-.5);
   // 문제 표시 (방향에 따라)
   document.getElementById('learn-qword').textContent = dir === 'en2ko' ? q.en : q.ko;
   document.getElementById('learn-progress').textContent = `${state.learnTotal - state.learnQueue.length + 1}/${state.learnTotal}`;
@@ -3479,6 +3503,7 @@ function saveResultToSheet(result) {
 function confirmBack() {
   if (confirm('학습을 중단하고 나가시겠습니까?')) {
     clearInterval(state.s3TimerInterval);
+    saveUserProgress();  // 나가기 전 자동 저장
     showScreen('screen-mode');
   }
 }
