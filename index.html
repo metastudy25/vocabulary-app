@@ -1076,6 +1076,13 @@
     <button class="btn-logout" onclick="doLogout()">로그아웃</button>
   </div>
   <div class="dashboard-body">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+      <button onclick="showMyRecord()"
+        style="background:rgba(201,162,75,.15);border:1px solid var(--gold);color:var(--gold);
+               border-radius:8px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;">
+        📊 내 학습 기록
+      </button>
+    </div>
     <div class="section-title">📚 단어장 선택</div>
     <div id="unit-list"></div>
   </div>
@@ -1104,19 +1111,19 @@
         <div class="mode-icon">🔄</div>
         <div class="mode-name">2차 학습</div>
         <div class="mode-desc">라이트너 분류 3회독</div>
-        <div class="mode-status" id="mode-status-2">1차 완료 후 해제</div>
+        <div class="mode-status active" id="mode-status-2">학습 가능</div>
       </div>
       <div class="mode-btn" id="mode-btn-3" onclick="startStage(3)">
         <div class="mode-icon">⏱️</div>
         <div class="mode-name">3차 테스트</div>
         <div class="mode-desc">타임어택 최종 점검</div>
-        <div class="mode-status" id="mode-status-3">2차 완료 후 해제</div>
+        <div class="mode-status active" id="mode-status-3">테스트 시작</div>
       </div>
       <div class="mode-btn" id="mode-btn-4" onclick="startSpell()">
         <div class="mode-icon">✍️</div>
         <div class="mode-name">철자 학습</div>
         <div class="mode-desc">생성형 인출 3단계</div>
-        <div class="mode-status" id="mode-status-4">3차 완료 후 해제</div>
+        <div class="mode-status active" id="mode-status-4">철자 도전</div>
       </div>
     </div>
     <div class="mode-grid">
@@ -1419,7 +1426,21 @@
 </div>
 
 <!-- ═══════════════════════════════════════
-     화면 11: 결과
+     화면 11: 나의 학습 기록
+════════════════════════════════════════ -->
+<div id="screen-myrecord" class="screen">
+  <div class="app-header">
+    <button class="btn-back" onclick="showScreen('screen-dashboard')">←</button>
+    <div class="header-logo">📊 학습 기록</div>
+    <div></div>
+  </div>
+  <div class="dashboard-body" style="padding:16px;">
+    <div id="myrecord-body"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     화면 12: 결과
 ════════════════════════════════════════ -->
 <div id="screen-result" class="screen">
   <div class="result-box">
@@ -1449,6 +1470,16 @@
     <button class="btn-logout" onclick="doLogout()">로그아웃</button>
   </div>
   <div class="admin-body">
+
+    <!-- ★ 전체 학습 기록 버튼 -->
+    <div style="margin-bottom:14px;">
+      <button onclick="showAdminRecords()"
+        style="width:100%;background:linear-gradient(135deg,#1a3a2a,#234870);
+               border:1px solid var(--gold);color:var(--gold);border-radius:12px;
+               padding:14px;font-size:15px;font-weight:900;cursor:pointer;">
+        📊 전체 학생 학습 기록 보기
+      </button>
+    </div>
 
     <!-- ① 단계 안내 배너 -->
     <div style="background:linear-gradient(135deg,#1a3a5c,#234870);border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid rgba(201,162,75,.3);">
@@ -1771,7 +1802,11 @@ let state = {
   // 완료 상태
   stage1Done: {}, stage2Done: {}, spellDone: {}, stage3Done: {},
   // 결과 전송
-  results: []
+  results: [],
+  // 학습 시간 추적 (Unit별)
+  studyTime: {},      // { unitId: { s1:초, s2:초, s3:초, spell:초, learn:초, match:초, blast:초 } }
+  _timerStart: null,  // 현재 구간 시작 시각
+  _timerMode: null    // 현재 측정 중인 모드 키
 };
 
 // ═══════════════════════════════════════════════
@@ -1849,6 +1884,157 @@ function doLogout() {
 // ═══════════════════════════════════════════════
 // 대시보드
 // ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// 학습 기록 화면
+// ═══════════════════════════════════════════════
+const MODE_LABELS = {
+  s1: '1차 플래시카드', s2: '2차 라이트너', s3: '3차 타임어택',
+  spell: '철자 학습', learn: '학습하기', match: '카드 맞추기', blast: '블래스트'
+};
+
+function showMyRecord() {
+  showScreen('screen-myrecord');
+  const body = document.getElementById('myrecord-body');
+  const units = WORD_UNITS;
+  const st = state.studyTime || {};
+
+  // 누적 총 시간
+  let grandTotal = 0;
+  Object.values(st).forEach(u => Object.values(u).forEach(s => grandTotal += s));
+
+  let html = `
+    <div style="background:rgba(201,162,75,.1);border:1px solid var(--gold);border-radius:12px;
+                padding:14px 18px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="color:var(--gold);font-weight:700;font-size:15px;">⏱ 총 누적 학습 시간</span>
+      <span style="color:#fff;font-size:20px;font-weight:900;">${fmtSec(grandTotal)}</span>
+    </div>`;
+
+  if (units.length === 0) {
+    html += '<p style="color:var(--gray-400);text-align:center;">학습 기록이 없습니다.</p>';
+  }
+
+  units.forEach(unit => {
+    const ut = st[unit.id] || {};
+    const unitTotal = Object.values(ut).reduce((a,b) => a+b, 0);
+    const d1 = state.stage1Done[unit.id], d2 = state.stage2Done[unit.id];
+    const d3 = state.stage3Done[unit.id], ds = state.spellDone[unit.id];
+
+    const modeRows = Object.entries(MODE_LABELS).map(([key, label]) => {
+      const secs = ut[key] || 0;
+      return secs > 0 ? `
+        <div style="display:flex;justify-content:space-between;padding:5px 0;
+                    border-bottom:1px solid rgba(255,255,255,.05);">
+          <span style="color:var(--gray-400);font-size:13px;">${label}</span>
+          <span style="color:#fff;font-size:13px;font-weight:600;">${fmtSec(secs)}</span>
+        </div>` : '';
+    }).join('');
+
+    const badges = [
+      d1 ? '<span style="background:#1a4a2e;color:#4caf50;border-radius:6px;padding:2px 8px;font-size:11px;margin-right:4px;">1차✓</span>' : '',
+      d2 ? '<span style="background:#1a3a4a;color:#64b5f6;border-radius:6px;padding:2px 8px;font-size:11px;margin-right:4px;">2차✓</span>' : '',
+      d3 ? '<span style="background:#3a2a1a;color:#ffb74d;border-radius:6px;padding:2px 8px;font-size:11px;margin-right:4px;">3차✓</span>' : '',
+      ds ? '<span style="background:#2a1a3a;color:#ce93d8;border-radius:6px;padding:2px 8px;font-size:11px;">철자✓</span>' : '',
+    ].join('');
+
+    html += `
+      <div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+                  border-radius:12px;padding:14px 16px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div>
+            <div style="color:#fff;font-weight:700;font-size:14px;">${unit.title}</div>
+            <div style="margin-top:4px;">${badges || '<span style="color:var(--gray-400);font-size:11px;">미학습</span>'}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="color:var(--gold);font-weight:700;font-size:15px;">${fmtSec(unitTotal)}</div>
+            <div style="color:var(--gray-400);font-size:11px;">이 단원 합계</div>
+          </div>
+        </div>
+        ${modeRows || '<div style="color:var(--gray-400);font-size:12px;padding:4px 0;">학습 기록 없음</div>'}
+      </div>`;
+  });
+
+  body.innerHTML = html;
+}
+
+// ── 관리자: 전체 학생 학습 기록 보기 ──
+function showAdminRecords() {
+  // 현재 브라우저에 저장된 모든 학생 기록 수집
+  const rows = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key.startsWith('eden_progress_')) continue;
+    const username = key.replace('eden_progress_', '');
+    try {
+      const data = JSON.parse(localStorage.getItem(key) || '{}');
+      const st = data.studyTime || {};
+      let grandTotal = 0;
+      Object.values(st).forEach(u => Object.values(u).forEach(s => grandTotal += s));
+      rows.push({ username, st, grandTotal,
+        d: { s1: data.stage1Done||{}, s2: data.stage2Done||{},
+             s3: data.stage3Done||{}, sp: data.spellDone||{} } });
+    } catch(e) {}
+  }
+
+  if (rows.length === 0) {
+    alert('저장된 학습 기록이 없습니다. (학생들이 같은 기기에서 학습한 경우에만 표시됩니다.)');
+    return;
+  }
+
+  // 팝업 창으로 보여주기
+  const win = window.open('', '_blank', 'width=780,height=620,scrollbars=yes');
+  let body = `<html><head><meta charset="utf-8">
+    <title>이든 단어카드 - 전체 학습 기록</title>
+    <style>
+      body{font-family:'Noto Sans KR',sans-serif;background:#0e1a33;color:#fff;padding:20px;margin:0;}
+      h2{color:#c9a24b;margin-bottom:16px;}
+      table{width:100%;border-collapse:collapse;font-size:13px;}
+      th{background:#1a2a4a;color:#c9a24b;padding:8px 10px;border:1px solid #234870;text-align:left;}
+      td{padding:7px 10px;border:1px solid #1e2d4a;vertical-align:top;}
+      tr:nth-child(even){background:rgba(255,255,255,.03);}
+      .badge{display:inline-block;border-radius:4px;padding:1px 6px;font-size:11px;margin:1px;}
+      .done{background:#1a4a2e;color:#4caf50;}
+      .btn{background:#c9a24b;color:#0e1a33;border:none;border-radius:6px;
+           padding:6px 14px;cursor:pointer;font-weight:700;margin-bottom:16px;}
+    </style></head><body>
+    <h2>📊 이든 단어카드 전체 학습 기록</h2>
+    <button class="btn" onclick="window.print()">🖨 인쇄 / PDF 저장</button>
+    <table>
+      <tr><th>학생</th><th>단원</th><th>완료 차시</th><th>모드별 시간</th><th>단원 합계</th></tr>`;
+
+  rows.sort((a,b) => a.username.localeCompare(b.username));
+  rows.forEach(row => {
+    const units = WORD_UNITS;
+    let firstRow = true;
+    units.forEach(unit => {
+      const ut = row.st[unit.id] || {};
+      const unitTotal = Object.values(ut).reduce((a,b)=>a+b,0);
+      if (unitTotal === 0) return;
+      const doneBadges = [
+        row.d.s1[unit.id] ? '<span class="badge done">1차</span>' : '',
+        row.d.s2[unit.id] ? '<span class="badge done">2차</span>' : '',
+        row.d.s3[unit.id] ? '<span class="badge done">3차</span>' : '',
+        row.d.sp[unit.id] ? '<span class="badge done">철자</span>' : '',
+      ].join('');
+      const timeDetail = Object.entries(MODE_LABELS)
+        .filter(([k]) => ut[k])
+        .map(([k,l]) => `${l}: ${fmtSec(ut[k])}`)
+        .join('<br>');
+      body += `<tr>
+        ${firstRow ? `<td rowspan="99" style="font-weight:700;color:#c9a24b;">${row.username}<br><small style="color:#8899aa;">총 ${fmtSec(row.grandTotal)}</small></td>` : ''}
+        <td>${unit.title}</td>
+        <td>${doneBadges||'-'}</td>
+        <td style="color:#aabbcc;">${timeDetail||'-'}</td>
+        <td style="font-weight:700;">${fmtSec(unitTotal)}</td>
+      </tr>`;
+      firstRow = false;
+    });
+  });
+
+  body += `</table></body></html>`;
+  win.document.write(body);
+  win.document.close();
+}
+
 function renderDashboard() {
   const ul = document.getElementById('unit-list');
   ul.innerHTML = '';
@@ -2069,6 +2255,7 @@ function startStage1() {
   state.s1Idx = 0; state.s1Flipped = false; state.s1LangEn = true;
   document.getElementById('lang-toggle').classList.remove('on');
   showScreen('screen-stage1');
+  startStudyTimer('s1');
   renderCard1();
   // DOM 준비 완료 후 스와이프 등록 (AbortController로 중복 자동 제거)
   requestAnimationFrame(() => {
@@ -2138,7 +2325,7 @@ function nextCard() {
   if (state.s1Idx < words.length - 1) { state.s1Idx++; renderCard1(); }
   else {
     state.stage1Done[state.currentUnit.id] = true;
-    saveUserProgress();
+    stopStudyTimer();
     showToast('1차 학습 완료! 🎉');
     setTimeout(() => showScreen('screen-mode'), 1200);
   }
@@ -2168,6 +2355,7 @@ function startStage2() {
   if (toggle) toggle.checked = (state.s2Dir === 'en2ko');
   if (knob) knob.style.left = state.s2Dir === 'en2ko' ? '3px' : '19px';
   showScreen('screen-stage2');
+  startStudyTimer('s2');
   renderLeitner();
   // 스와이프 초기화
   const card = document.getElementById('s2-card');
@@ -2190,7 +2378,7 @@ function renderLeitner() {
       setTimeout(renderLeitner, 400); return;
     }
     state.stage2Done[state.currentUnit.id] = true;
-    saveUserProgress();
+    stopStudyTimer();
     showToast('2차 학습 완료! 이제 3차 테스트로 ⏱️');
     setTimeout(() => showScreen('screen-mode'), 1400);
     return;
@@ -2248,6 +2436,7 @@ function startSpell() {
   state.spellLevel = 1; state.spellIdx = 0;
   state.spellQueue = [...state.currentUnit.words];
   showScreen('screen-spell');
+  startStudyTimer('spell');
   renderSpell();
 }
 function setSpellLevel(lv) {
@@ -2261,7 +2450,7 @@ function setSpellLevel(lv) {
 function renderSpell() {
   if (state.spellQueue.length === 0) {
     state.spellDone[state.currentUnit.id] = true;
-    saveUserProgress();
+    stopStudyTimer();
     showToast('철자 학습 완료! 이제 최종 테스트로 📝');
     setTimeout(() => showScreen('screen-mode'), 1300);
     return;
@@ -2429,6 +2618,7 @@ function startStage3() {
   if (toggle) toggle.checked = (state.s3Dir === 'en2ko');
   if (knob) knob.style.left = state.s3Dir === 'en2ko' ? '3px' : '19px';
   showScreen('screen-stage3');
+  startStudyTimer('s3');
   // initSwipe 등록 (화면 전환 후 DOM 준비되면 바인딩)
   requestAnimationFrame(() => {
     const card = document.getElementById('s3-card');
@@ -2538,7 +2728,7 @@ function finishStage3() {
   const correctFirst = total - state.s3FirstWrong.length;
   const pct = Math.round((correctFirst / total) * 100);
   state.stage3Done[state.currentUnit.id] = true;
-  saveUserProgress();
+  stopStudyTimer();
   // 결과 저장
   const result = {
     user: state.user,
@@ -2591,6 +2781,7 @@ function startLearn() {
   state.learnTotal = words.length;
   if (!state.learnDir) state.learnDir = 'en2ko';
   showScreen('screen-learn');
+  startStudyTimer('learn');
   // 슬라이더 초기화
   const toggle = document.getElementById('learn-dir-toggle');
   const knob   = document.getElementById('learn-dir-knob');
@@ -2698,6 +2889,7 @@ function startMatch() {
     document.getElementById('match-timer').textContent = state.matchElapsed.toFixed(1)+'초';
   }, 100);
   showScreen('screen-match');
+  startStudyTimer('match');
   // 그리드 높이: 전체화면 꽉 채우기
   requestAnimationFrame(() => {
     const header = document.querySelector('#screen-match .stage-header');
@@ -2842,6 +3034,7 @@ function toggleBlastDir() {
 
 function startBlast() {
   showScreen('screen-blast');
+  startStudyTimer('blast');
   blastCanvas = document.getElementById('blast-canvas');
   const resize = () => {
     blastCanvas.width = blastCanvas.offsetWidth;
@@ -3111,6 +3304,7 @@ function blastLoop() {
 function stopBlast() {
   if (blastAnimId) cancelAnimationFrame(blastAnimId);
   blastAnimId = null;
+  stopStudyTimer();
 }
 // ═══════════════════════════════════════════════
 // TTS 발음 — 디바운스로 중복 호출 방지
@@ -3460,9 +3654,36 @@ function saveUserProgress() {
     stage1Done: state.stage1Done,
     stage2Done: state.stage2Done,
     spellDone: state.spellDone,
-    stage3Done: state.stage3Done
+    stage3Done: state.stage3Done,
+    studyTime: state.studyTime
   }));
 }
+// ═══════════════════════════════════════════════
+// 학습 시간 타이머 헬퍼
+// ═══════════════════════════════════════════════
+function startStudyTimer(modeKey) {
+  // 이전 타이머가 있으면 먼저 저장
+  stopStudyTimer();
+  state._timerStart = Date.now();
+  state._timerMode  = modeKey;
+}
+function stopStudyTimer() {
+  if (!state._timerStart || !state._timerMode || !state.currentUnit) return;
+  const uid  = state.currentUnit.id;
+  const secs = Math.round((Date.now() - state._timerStart) / 1000);
+  if (!state.studyTime[uid]) state.studyTime[uid] = {};
+  state.studyTime[uid][state._timerMode] =
+    (state.studyTime[uid][state._timerMode] || 0) + secs;
+  state._timerStart = null;
+  state._timerMode  = null;
+  saveUserProgress();
+}
+function fmtSec(s) {
+  if (!s) return '0분';
+  const m = Math.floor(s / 60), r = s % 60;
+  return m > 0 ? `${m}분 ${r}초` : `${r}초`;
+}
+
 function loadUserProgress() {
   const key = `eden_progress_${state.user}`;
   const saved = JSON.parse(localStorage.getItem(key)||'{}');
@@ -3470,6 +3691,7 @@ function loadUserProgress() {
   state.stage2Done = saved.stage2Done || {};
   state.spellDone = saved.spellDone || {};
   state.stage3Done = saved.stage3Done || {};
+  state.studyTime  = saved.studyTime  || {};
 }
 function saveResultToSheet(result) {
   // 구글 Apps Script Web App URL로 전송 (원장님이 배포 후 URL 입력)
@@ -3503,7 +3725,7 @@ function saveResultToSheet(result) {
 function confirmBack() {
   if (confirm('학습을 중단하고 나가시겠습니까?')) {
     clearInterval(state.s3TimerInterval);
-    saveUserProgress();  // 나가기 전 자동 저장
+    stopStudyTimer();    // 학습 시간 저장 후 자동 저장
     showScreen('screen-mode');
   }
 }
