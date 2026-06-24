@@ -3176,7 +3176,6 @@ function generateStudentFile() {
   statusEl.style.color = 'var(--gray-400)';
   statusEl.textContent = '⏳ 파일 생성 중...';
 
-  // 업로드된 단원만 추출 (기본 내장 단원 제외)
   const uploadedUnits = WORD_UNITS.filter(u => u.id !== 'unit1' && u.id !== 'unit2');
   if (uploadedUnits.length === 0) {
     statusEl.style.background = 'rgba(239,68,68,.12)';
@@ -3185,56 +3184,44 @@ function generateStudentFile() {
     return;
   }
 
-  // 현재 HTML 가져오기
   const originalHTML = document.documentElement.outerHTML;
-
-  // WORD_UNITS 부분을 업로드된 단어장 데이터로 교체
-  // 교체 마커: const WORD_UNITS = [ ... ]; 부분
   const wordUnitsJSON = JSON.stringify(uploadedUnits, null, 2);
-  const newWordUnits = `const WORD_UNITS = ${wordUnitsJSON};`;
+  const newWordUnits = 'const WORD_UNITS = ' + wordUnitsJSON + ';';
 
-  // 정규식으로 기존 WORD_UNITS 선언 전체 교체
-  const pattern = /\/\/ ═+
-\/\/ 예시 단어장.*?
-\/\/ ═+
-const WORD_UNITS = \[[\s\S]*?\];/;
+  // WORD_UNITS 선언부를 문자열 indexOf로 찾아서 교체 (정규식 불사용)
+  const MARKER_START = 'const WORD_UNITS = [';
+  const MARKER_END = '];';
+  let idx = originalHTML.indexOf(MARKER_START);
   let studentHTML;
 
-  if (pattern.test(originalHTML)) {
-    studentHTML = originalHTML.replace(pattern,
-      `// ═══════════════════════════════════════════════
-// 단어장 데이터 (관리자 업로드)
-// ═══════════════════════════════════════════════
-${newWordUnits}`
-    );
-  } else {
-    // fallback: 단순 치환
-    const simplePattern = /const WORD_UNITS = \[[\s\S]*?
-\];/;
-    if (simplePattern.test(originalHTML)) {
-      studentHTML = originalHTML.replace(simplePattern, newWordUnits);
-    } else {
-      statusEl.style.background = 'rgba(239,68,68,.12)';
-      statusEl.style.color = 'var(--red)';
-      statusEl.textContent = '❌ 파일 생성 실패. 페이지를 새로고침 후 다시 시도해주세요.';
-      return;
+  if (idx !== -1) {
+    // WORD_UNITS = [ ... ]; 끝 위치 찾기 (중첩 배열 고려)
+    let depth = 0, pos = idx + MARKER_START.length - 1;
+    while (pos < originalHTML.length) {
+      if (originalHTML[pos] === '[') depth++;
+      else if (originalHTML[pos] === ']') {
+        depth--;
+        if (depth === 0) break;
+      }
+      pos++;
     }
+    // pos는 마지막 ] 위치
+    const before = originalHTML.substring(0, idx);
+    const after  = originalHTML.substring(pos + 2); // ]; 뒤부터
+    studentHTML = before + newWordUnits + after;
+  } else {
+    statusEl.style.background = 'rgba(239,68,68,.12)';
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = '❌ 파일 생성 실패. 페이지를 새로고침 후 다시 시도해주세요.';
+    return;
   }
 
-  // 학생용에서 관리자 로그인 기능 숨기기 (선택 — 주석 처리)
-  // studentHTML = studentHTML.replace('관리자로 로그인', '<!-- 관리자 메뉴 숨김 -->');
-
-  // 파일명
   const filename = (document.getElementById('deploy-filename').value.trim() || '이든단어카드') + '.html';
-
-  // 다운로드
   const blob = new Blob([studentHTML], { type: 'text/html;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 
@@ -3242,10 +3229,9 @@ ${newWordUnits}`
   const wordCount = uploadedUnits.reduce((s, u) => s + u.words.length, 0);
   statusEl.style.background = 'rgba(34,197,94,.1)';
   statusEl.style.color = 'var(--green)';
-  statusEl.innerHTML = `✅ <strong>"${filename}"</strong> 생성 완료!<br>
-    <span style="font-size:12px;color:var(--gray-400);">${unitCount}개 단원 · ${wordCount}개 단어 내장 · 카카오톡/밴드/드라이브로 학생들에게 전달하세요</span>`;
-
-  showToast(`${filename} 다운로드 완료 📥`);
+  statusEl.innerHTML = '✅ <strong>"' + filename + '"</strong> 생성 완료!<br>' +
+    '<span style="font-size:12px;color:var(--gray-400);">' + unitCount + '개 단원 · ' + wordCount + '개 단어 내장 · 카카오톡/밴드로 전달하세요</span>';
+  showToast(filename + ' 다운로드 완료 📥');
 }
 
 function downloadSampleCSV() {
