@@ -771,12 +771,9 @@
   /* ────────── 게임: 카드 맞추기 ────────── */
   #screen-match {
     background: var(--navy);
-    display: none;
-    flex-direction: column;
     height: 100vh;
     overflow: hidden;
   }
-  #screen-match.active { display: flex; }
 
   .match-area {
     flex: 1;
@@ -1053,7 +1050,7 @@
         <div class="label">비밀번호</div>
         <input type="password" id="input-pw" placeholder="비밀번호 6자리">
       </div>
-      <div class="login-error" id="login-error">이름 또는 비밀번호가 올바르지 않습니다.</div>
+      <div class="login-error" id="login-error">이름 또는 비밀번호가 올바르지 않습니다.<br><span style="font-size:12px;opacity:.8;">이름은 정확하게, 비번은 숫자만 입력하세요</span></div>
       <button class="btn btn-gold btn-full" onclick="doLogin()">로그인</button>
     </div>
     <div class="admin-toggle">
@@ -1062,7 +1059,7 @@
     <div class="login-form" id="login-form-admin" style="display:none; margin-top:16px;">
       <div class="form-group">
         <div class="label">관리자 비밀번호</div>
-        <input type="password" id="input-admin-pw" placeholder="관리자 비밀번호">
+        <input type="password" id="input-admin-pw" placeholder="관리자 비밀번호" onkeydown="if(event.key==='Enter') doAdminLogin()">
       </div>
       <button class="btn btn-outline btn-full" onclick="doAdminLogin()">관리자 로그인</button>
     </div>
@@ -1618,42 +1615,60 @@ const SHEET_ID = '17ARTCYwJFKBGhZmtsHnyGxLce4Jl5wd9dRmvZFMTJhs';
 const ADMIN_PW = 'eden2026';
 
 // 구글 시트에서 읽어온 학생 데이터 (시트 로드 실패 시 fallback)
+// 구글 시트 최신 데이터 (2026-06-24 기준, 24명)
 const STUDENTS_FALLBACK = [
-  {name:'김유성', pw:'505600'}, {name:'김지우', pw:'965802'},
-  {name:'박민균', pw:'499500'}, {name:'박주혁', pw:'296500'},
-  {name:'박준혁', pw:'283700'}, {name:'박준혁(H)', pw:'141600'},
-  {name:'백승효', pw:'607800'}, {name:'손은지', pw:'790500'},
-  {name:'손지예', pw:'149700'}, {name:'손태영', pw:'910600'},
-  {name:'이서윤', pw:'795400'}, {name:'이성현', pw:'780900'},
-  {name:'이수연', pw:'095400'}, {name:'이승찬', pw:'005100'},
-  {name:'이윤재', pw:'951100'}, {name:'이재훈', pw:'095400'},
-  {name:'이주형', pw:'005101'}, {name:'장은서', pw:'391700'},
-  {name:'정하윤', pw:'384000'}, {name:'조승훈', pw:'144300'},
-  {name:'조여은류나', pw:'988000'}, {name:'최수정', pw:'517400'},
-  {name:'황혜암', pw:'281700'}
+  {name:'김유성',    pw:'505600'},
+  {name:'김지우',    pw:'965802'},
+  {name:'박민균',    pw:'499500'},
+  {name:'박주혁',    pw:'296500'},
+  {name:'박준혁',    pw:'283700'},
+  {name:'박준혁(H)', pw:'141600'},
+  {name:'백승효',    pw:'607800'},
+  {name:'손은지',    pw:'790500'},
+  {name:'손지예',    pw:'149700'},
+  {name:'손태영',    pw:'910600'},
+  {name:'이서윤',    pw:'795400'},
+  {name:'이성현',    pw:'780900'},
+  {name:'이수연',    pw:'095400'},
+  {name:'이승찬',    pw:'005100'},
+  {name:'이윤재',    pw:'951100'},
+  {name:'이재훈',    pw:'095400'},
+  {name:'이주형',    pw:'005101'},
+  {name:'장은서',    pw:'391700'},
+  {name:'전혜리',    pw:'718900'},
+  {name:'정하윤',    pw:'384000'},
+  {name:'조승훈',    pw:'144300'},
+  {name:'조여은류나', pw:'988000'},
+  {name:'최수정',    pw:'517400'},
+  {name:'황혜암',    pw:'281700'}
 ];
 
 let STUDENTS = [...STUDENTS_FALLBACK];
 
 // 구글 시트 CSV 공개 URL로 학생 목록 동적 로드
-async function loadStudentsFromSheet() {
+// 구글 시트 로드 — 백그라운드에서만 시도, 실패해도 fallback 항상 유지
+function loadStudentsFromSheet() {
+  // SHEET_ID가 없거나 배포용 파일이면 스킵
+  if (!SHEET_ID) return;
   try {
     const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Sheet1`;
-    const res = await fetch(url);
-    if (!res.ok) return;
-    const text = await res.text();
-    const rows = text.split('\n').slice(1); // 헤더 제거
-    const loaded = [];
-    for (const row of rows) {
-      const cols = row.split(',').map(c => c.replace(/"/g,'').trim());
-      if (cols[0] && cols[1]) loaded.push({name: cols[0], pw: cols[1]});
-    }
-    if (loaded.length > 0) {
-      STUDENTS = loaded;
-      console.log(`학생 ${STUDENTS.length}명 시트에서 로드 완료`);
-    }
+    fetch(url, { signal: AbortSignal.timeout ? AbortSignal.timeout(4000) : undefined })
+      .then(res => { if (!res.ok) throw new Error('not ok'); return res.text(); })
+      .then(text => {
+        const rows = text.split('\n').slice(1);
+        const loaded = [];
+        for (const row of rows) {
+          const cols = row.split(',').map(c => c.replace(/"/g,'').trim());
+          if (cols[0] && cols[1]) loaded.push({name: cols[0], pw: cols[1]});
+        }
+        if (loaded.length > 0) {
+          STUDENTS = loaded;
+          console.log('시트 로드 완료:', STUDENTS.length, '명');
+        }
+      })
+      .catch(() => console.log('시트 로드 실패 — fallback 유지'));
   } catch(e) {
-    console.log('시트 로드 실패, fallback 사용');
+    console.log('fetch 미지원 — fallback 유지');
   }
 }
 loadStudentsFromSheet();
@@ -1758,14 +1773,28 @@ function showScreen(id) {
 let adminMode = false;
 function toggleAdminMode() {
   adminMode = !adminMode;
-  document.getElementById('login-form-admin').style.display = adminMode ? 'flex' : 'none';
+  const adminForm = document.getElementById('login-form-admin');
+  adminForm.style.display = adminMode ? 'flex' : 'none';
+  if (adminMode) {
+    // 관리자 폼이 열리면 비번 입력창에 포커스
+    setTimeout(() => {
+      const el = document.getElementById('input-admin-pw');
+      if (el) { el.value = ''; el.focus(); }
+    }, 50);
+  }
 }
 
-async function doLogin() {
+function doLogin() {
   const name = document.getElementById('input-name').value.trim();
-  const pw = document.getElementById('input-pw').value.trim();
-  await loadStudentsFromSheet();
-  const found = STUDENTS.find(s => s.name === name && String(s.pw) === String(pw));
+  const pw   = document.getElementById('input-pw').value.trim();
+  if (!name || !pw) {
+    document.getElementById('login-error').style.display = 'block';
+    return;
+  }
+  // STUDENTS 배열에서 이름+비번 매칭 (String 변환으로 타입 무관)
+  const found = STUDENTS.find(s =>
+    s.name.trim() === name && String(s.pw).trim() === String(pw).trim()
+  );
   if (!found) {
     document.getElementById('login-error').style.display = 'block';
     return;
@@ -1779,12 +1808,16 @@ async function doLogin() {
 }
 
 function doAdminLogin() {
-  const pw = document.getElementById('input-admin-pw').value.trim();
-  if (pw !== ADMIN_PW) { showToast('관리자 비밀번호가 틀렸습니다.'); return; }
+  const pwEl = document.getElementById('input-admin-pw');
+  if (!pwEl) { alert('관리자 입력창을 찾을 수 없습니다.'); return; }
+  const pw = pwEl.value.trim();
+  if (!pw) { showToast('비밀번호를 입력하세요.'); return; }
+  if (pw !== ADMIN_PW) { showToast('관리자 비밀번호가 틀렸습니다. (힌트: eden + 연도)'); return; }
   state.user = '관리자';
   state.isAdmin = true;
   showScreen('screen-admin');
-  loadAdminData();
+  // DOM이 표시된 후 데이터 렌더링
+  setTimeout(loadAdminData, 50);
 }
 
 function doLogout() {
@@ -3321,7 +3354,7 @@ document.addEventListener('keydown', e => {
   const id = active.id;
 
   // 로그인 엔터
-  if (id === 'screen-login' && e.key === 'Enter') { doLogin(); return; }
+  if (id === 'screen-login' && e.key === 'Enter') { e.preventDefault(); doLogin(); return; }
 
   // 1차 학습: 화살표로 카드 이동
   if (id === 'screen-stage1') {
