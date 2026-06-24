@@ -1417,35 +1417,151 @@
     <button class="btn-logout" onclick="doLogout()">로그아웃</button>
   </div>
   <div class="admin-body">
-    <div class="admin-card">
-      <h3>📤 단어장 업로드 (CSV/Excel)</h3>
-      <div class="upload-area" onclick="document.getElementById('csv-file').click()">
-        <div class="upload-icon">📁</div>
-        <div class="upload-text"><strong>클릭하여 파일 선택</strong><br>CSV: 영어, 한글뜻, 예문(선택)</div>
-        <input type="file" id="csv-file" accept=".csv,.xlsx" style="display:none" onchange="uploadWordList(this)">
+
+    <!-- ① 단계 안내 배너 -->
+    <div style="background:linear-gradient(135deg,#1a3a5c,#234870);border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid rgba(201,162,75,.3);">
+      <div style="font-size:15px;font-weight:900;color:var(--gold);margin-bottom:12px;">📋 단어장 등록 → 학생 학습 흐름</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="min-width:28px;height:28px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--navy);">1</div>
+          <div>
+            <div style="font-weight:700;font-size:14px;">CSV 파일 업로드</div>
+            <div style="font-size:12px;color:var(--gray-400);margin-top:2px;">아래 업로드 버튼 클릭 → 파일 선택 → 단어장이 즉시 등록됩니다</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="min-width:28px;height:28px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--navy);">2</div>
+          <div>
+            <div style="font-weight:700;font-size:14px;">단어장 확인 & 미리보기</div>
+            <div style="font-size:12px;color:var(--gray-400);margin-top:2px;">업로드 후 아래 목록에서 단어 수와 내용을 확인하세요</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="min-width:28px;height:28px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--navy);">3</div>
+          <div>
+            <div style="font-weight:700;font-size:14px;">학생에게 비번 알려주기</div>
+            <div style="font-size:12px;color:var(--gray-400);margin-top:2px;">아래 학생 목록의 비밀번호를 각 학생에게 전달하세요</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="min-width:28px;height:28px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--navy);">4</div>
+          <div>
+            <div style="font-weight:700;font-size:14px;">학생이 로그인 후 학습</div>
+            <div style="font-size:12px;color:var(--gray-400);margin-top:2px;">이름 + 비번으로 로그인 → <strong>Unit별</strong>로 단어장이 자동으로 보임</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:12px;">
+          <div style="min-width:28px;height:28px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:var(--navy);">5</div>
+          <div>
+            <div style="font-weight:700;font-size:14px;">결과 확인</div>
+            <div style="font-size:12px;color:var(--gray-400);margin-top:2px;">3차 테스트 완료 시 아래 학습 결과 탭에 자동 기록됩니다</div>
+          </div>
+        </div>
       </div>
-      <div id="upload-status" style="margin-top:12px;font-size:13px;color:var(--gold);"></div>
     </div>
 
+    <!-- ② CSV 형식 안내 -->
+    <div style="background:rgba(201,162,75,.08);border:1px solid rgba(201,162,75,.25);border-radius:12px;padding:16px;margin-bottom:16px;">
+      <div style="font-size:13px;font-weight:700;color:var(--gold);margin-bottom:10px;">📄 CSV 파일 열(Column) 구성</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px;">
+        <thead>
+          <tr style="background:rgba(0,0,0,.3);">
+            <th style="padding:7px 10px;text-align:left;color:var(--gold);border-bottom:1px solid rgba(201,162,75,.2);">열</th>
+            <th style="padding:7px 10px;text-align:left;color:var(--gold);border-bottom:1px solid rgba(201,162,75,.2);">항목</th>
+            <th style="padding:7px 10px;text-align:left;color:var(--gold);border-bottom:1px solid rgba(201,162,75,.2);">필수</th>
+            <th style="padding:7px 10px;text-align:left;color:var(--gold);border-bottom:1px solid rgba(201,162,75,.2);">예시</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.05);">
+            <td style="padding:7px 10px;font-weight:700;color:#e8c97a;">A열</td>
+            <td style="padding:7px 10px;">Unit (단원명)</td>
+            <td style="padding:7px 10px;color:var(--green);">필수 ✓</td>
+            <td style="padding:7px 10px;color:var(--gray-400);">Unit 1, Chapter 2, Day 01</td>
+          </tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.05);">
+            <td style="padding:7px 10px;font-weight:700;color:#e8c97a;">B열</td>
+            <td style="padding:7px 10px;">영단어</td>
+            <td style="padding:7px 10px;color:var(--green);">필수 ✓</td>
+            <td style="padding:7px 10px;color:var(--gray-400);">ability</td>
+          </tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.05);">
+            <td style="padding:7px 10px;font-weight:700;color:#e8c97a;">C열</td>
+            <td style="padding:7px 10px;">한글 뜻</td>
+            <td style="padding:7px 10px;color:var(--green);">필수 ✓</td>
+            <td style="padding:7px 10px;color:var(--gray-400);">능력</td>
+          </tr>
+          <tr style="border-bottom:1px solid rgba(255,255,255,.05);">
+            <td style="padding:7px 10px;font-weight:700;color:#e8c97a;">D열</td>
+            <td style="padding:7px 10px;">예문 (영어)</td>
+            <td style="padding:7px 10px;color:var(--gray-400);">선택</td>
+            <td style="padding:7px 10px;color:var(--gray-400);">She has great ability.</td>
+          </tr>
+          <tr>
+            <td style="padding:7px 10px;font-weight:700;color:#e8c97a;">E열</td>
+            <td style="padding:7px 10px;">예문 한글 해석</td>
+            <td style="padding:7px 10px;color:var(--gray-400);">선택</td>
+            <td style="padding:7px 10px;color:var(--gray-400);">그녀는 뛰어난 능력이 있다.</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="font-family:monospace;font-size:11px;background:rgba(0,0,0,.35);padding:10px;border-radius:8px;line-height:1.9;color:#e2e8f0;overflow-x:auto;">
+        Unit,영단어,한글뜻,예문,한글해석<br>
+        Unit 1,ability,능력,She has great ability.,그녀는 뛰어난 능력이 있다.<br>
+        Unit 1,achieve,성취하다,You can achieve your goals.,목표를 이룰 수 있어.<br>
+        Unit 2,brave,용감한,He is very brave.,그는 매우 용감하다.<br>
+        Unit 2,curious,호기심 많은,She is curious.,그녀는 호기심이 많다.
+      </div>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:8px;line-height:1.6;">
+        ※ 같은 Unit명끼리 자동으로 묶여 단원별 학습이 가능합니다<br>
+        ※ 첫 줄 헤더(Unit,영단어,한글뜻,예문,한글해석)는 자동 인식됩니다<br>
+        ※ 인코딩: <strong style="color:var(--gold);">UTF-8 · EUC-KR 모두 자동 인식</strong> — 엑셀 기본 저장(CSV) 그대로 업로드 가능
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+        <button class="btn btn-sm" style="background:var(--navy-mid);border:1px solid var(--gold);color:var(--gold);" onclick="downloadSampleCSV()">📥 샘플 CSV 다운로드</button>
+        <button class="btn btn-sm" style="background:var(--navy-mid);border:1px solid var(--gray-400);color:var(--gray-400);" onclick="showCsvTip()">❓ 엑셀로 만드는 방법</button>
+      </div>
+    </div>
+
+    <!-- ③ 업로드 영역 -->
+    <div class="admin-card">
+      <h3>📤 단어장 업로드</h3>
+      <div class="upload-area" onclick="document.getElementById('csv-file').click()">
+        <div class="upload-icon">📁</div>
+        <div class="upload-text"><strong>클릭하여 CSV 파일 선택</strong><br>영어, 한글뜻, 예문(선택) 형식</div>
+        <input type="file" id="csv-file" accept=".csv,.txt" style="display:none" onchange="uploadWordList(this)">
+      </div>
+      <div id="upload-status" style="margin-top:12px;font-size:13px;"></div>
+    </div>
+
+    <!-- ④ 등록된 단어장 목록 -->
+    <div class="admin-card" id="admin-wordlist-card" style="display:none;">
+      <h3>📚 등록된 단어장 <span id="admin-unit-count" style="font-size:12px;color:var(--gray-400);"></span></h3>
+      <div id="admin-unit-list"></div>
+    </div>
+
+    <!-- ⑤ 학습 결과 -->
     <div class="admin-card">
       <h3>📊 학생 학습 결과</h3>
       <div style="overflow-x:auto;">
         <table class="admin-table" id="admin-results-table">
           <thead><tr><th>이름</th><th>단원</th><th>점수</th><th>날짜</th><th>틀린 단어</th></tr></thead>
           <tbody id="admin-results-body">
-            <tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:20px;">결과 없음</td></tr>
+            <tr><td colspan="5" style="text-align:center;color:var(--gray-400);padding:20px;">아직 결과 없음<br><span style="font-size:11px;">학생이 3차 테스트를 완료하면 여기에 기록됩니다</span></td></tr>
           </tbody>
         </table>
       </div>
     </div>
 
+    <!-- ⑥ 학생 목록 -->
     <div class="admin-card">
-      <h3>👥 등록 학생 목록</h3>
+      <h3>👥 등록 학생 목록 <span style="font-size:11px;color:var(--gray-400);">(비번을 각 학생에게 알려주세요)</span></h3>
       <table class="admin-table">
-        <thead><tr><th>이름</th><th>비번</th><th>상태</th></tr></thead>
+        <thead><tr><th>이름</th><th>비밀번호</th><th>상태</th></tr></thead>
         <tbody id="admin-students-body"></tbody>
       </table>
     </div>
+
   </div>
 </div>
 
@@ -1842,7 +1958,8 @@ function renderCard1() {
     document.getElementById('s1-phonetic').textContent = '';
     document.getElementById('s1-meaning').textContent = w.en;
   }
-  document.getElementById('s1-example').textContent = w.ex || '';
+  document.getElementById('s1-example').textContent = 
+    [w.ex, w.exKo].filter(Boolean).join('  →  ') || '';
   const inner = document.getElementById('s1-card-inner');
   inner.classList.remove('flipped'); state.s1Flipped = false;
   const starred = state.s1Stars.has(state.s1Idx);
@@ -2760,11 +2877,16 @@ function speakWord(word) {
 // 관리자
 // ═══════════════════════════════════════════════
 function loadAdminData() {
+  // 단어장 목록 렌더
+  renderAdminUnitList();
+  if (WORD_UNITS.length > 0) {
+    document.getElementById('admin-wordlist-card').style.display = 'block';
+  }
   // 학생 목록 렌더
   const tbody = document.getElementById('admin-students-body');
   tbody.innerHTML = '';
   STUDENTS.forEach(s => {
-    tbody.innerHTML += `<tr><td>${s.name}</td><td style="color:var(--gray-400);font-size:12px;">${String(s.pw).replace(/./g,'•')}</td><td><span class="badge badge-navy">등록</span></td></tr>`;
+    tbody.innerHTML += `<tr><td>${s.name}</td><td style="color:var(--gold-light);font-size:13px;font-weight:700;letter-spacing:.05em;">${s.pw}</td><td><span class="badge badge-navy">등록</span></td></tr>`;
   });
   // 결과 렌더
   const results = JSON.parse(localStorage.getItem('eden_results')||'[]');
@@ -2776,24 +2898,234 @@ function loadAdminData() {
     rb.innerHTML += `<tr><td>${r.user}</td><td>${r.unit}</td><td><span class="score-pill ${cls}">${r.score}%</span></td><td>${r.date}</td><td style="font-size:12px;color:var(--gray-400);">${(r.wrong||[]).join(', ')||'없음'}</td></tr>`;
   });
 }
+// CSV 한 줄을 컬럼 배열로 파싱 (쉼표 포함 셀 처리)
+function parseCSVRow(row) {
+  const cols = [];
+  let cur = '', inQ = false;
+  for (let i = 0; i < row.length; i++) {
+    const ch = row[i];
+    if (ch === '"') { inQ = !inQ; continue; }
+    if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; continue; }
+    cur += ch;
+  }
+  cols.push(cur.trim());
+  return cols;
+}
+
+// 텍스트에 한글 깨짐 여부 판단 (EUC-KR을 UTF-8로 읽으면 □ 또는 replacement char 등장)
+function isGarbled(text) {
+  // 유효 한글 범위(가-힣)가 없고, 깨진 문자(0xFFFD 또는 제어문자 연속)가 있으면 깨진 것으로 판단
+  const hasValidKorean = /[\uAC00-\uD7A3]/.test(text);
+  const hasReplacement = /\uFFFD/.test(text);
+  // 한글이 없고 replacement char가 있거나, 깨진 패턴(연속된 비정상 문자) 감지
+  const brokenPattern = /[\x80-\xBF]{2,}/.test(text);
+  return hasReplacement || (!hasValidKorean && brokenPattern);
+}
+
+function parseAndLoadCSV(text, statusEl) {
+  const cleaned = text.replace(/^\uFEFF/, '');  // BOM 제거
+  const rows = cleaned.split(/\r?\n/).filter(r => r.trim());
+
+  if (rows.length < 2) {
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = '❌ 데이터가 부족합니다. 헤더 포함 2줄 이상 필요합니다.';
+    return false;
+  }
+
+  // 헤더 행 판별
+  const firstCols = parseCSVRow(rows[0]);
+  const isHeader = /^(unit|단원|chapter|day)/i.test(firstCols[0])
+                || /^[가-힣]/.test(firstCols[0])
+                || (firstCols[1] && /^[가-힣]/.test(firstCols[1]));
+  const dataRows = isHeader ? rows.slice(1) : rows;
+
+  // A열(Unit) 기준 그룹핑
+  const unitMap = new Map();
+  const unitOrder = [];
+
+  dataRows.forEach(row => {
+    if (!row.trim()) return;
+    const cols = parseCSVRow(row);
+    if (cols.length < 3) return;
+    const unitName = cols[0].trim();
+    const en       = cols[1].trim();
+    const ko       = cols[2].trim();
+    const ex       = cols[3] ? cols[3].trim() : '';
+    const exKo     = cols[4] ? cols[4].trim() : '';
+    if (!unitName || !en || !ko) return;
+
+    if (!unitMap.has(unitName)) {
+      unitMap.set(unitName, []);
+      unitOrder.push(unitName);
+    }
+    unitMap.get(unitName).push({ en: en.toLowerCase(), ko, ex, exKo });
+  });
+
+  if (unitOrder.length === 0) {
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = '❌ 단어를 찾을 수 없습니다. A열=Unit명, B열=영단어, C열=한글뜻 형식인지 확인하세요.';
+    return false;
+  }
+
+  // 기존 커스텀 단원 제거 후 새로 등록
+  const builtins = WORD_UNITS.filter(u => u.id === 'unit1' || u.id === 'unit2');
+  WORD_UNITS.length = 0;
+  builtins.forEach(u => WORD_UNITS.push(u));
+
+  let totalWords = 0;
+  unitOrder.forEach(unitName => {
+    const words = unitMap.get(unitName);
+    totalWords += words.length;
+    WORD_UNITS.push({
+      id: `custom_${unitName}_${Date.now()}`,
+      title: unitName,
+      subtitle: `${words.length}개 단어`,
+      words
+    });
+  });
+
+  // 단원 목록 앞 20개만 표시
+  const unitPreview = unitOrder.slice(0, 20).join(' · ')
+    + (unitOrder.length > 20 ? ` · ... (${unitOrder.length - 20}개 더)` : '');
+
+  statusEl.style.color = 'var(--green)';
+  statusEl.innerHTML = `✅ <strong>${unitOrder.length}개 단원, ${totalWords}개 단어</strong> 등록 완료!<br>
+    <span style="font-size:12px;color:var(--gray-400);">단원: ${unitPreview}</span>`;
+
+  renderAdminUnitList();
+  showToast(`${unitOrder.length}개 단원 등록 완료 🎉`);
+  return true;
+}
+
 function uploadWordList(input) {
   const file = input.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const text = e.target.result;
-    const rows = text.split('\n').slice(1);
-    const words = [];
-    rows.forEach(row => {
-      const cols = row.split(',').map(c => c.replace(/"/g,'').trim());
-      if (cols[0] && cols[1]) words.push({en:cols[0], ko:cols[1], ex:cols[2]||''});
-    });
-    if (words.length > 0) {
-      WORD_UNITS.push({ id:`custom_${Date.now()}`, title:`커스텀 단어장 (${words.length}개)`, subtitle:file.name, words });
-      document.getElementById('upload-status').textContent = `✅ ${words.length}개 단어 업로드 완료!`;
+  const statusEl = document.getElementById('upload-status');
+  statusEl.style.color = 'var(--gray-400)';
+  statusEl.textContent = '⏳ 파일을 읽는 중...';
+  input.value = '';
+
+  // 1차: UTF-8로 읽기
+  const r1 = new FileReader();
+  r1.onload = e => {
+    const textUtf8 = e.target.result;
+    if (!isGarbled(textUtf8)) {
+      // UTF-8 정상 → 바로 처리
+      parseAndLoadCSV(textUtf8, statusEl);
+    } else {
+      // 2차: EUC-KR로 재시도
+      statusEl.textContent = '⏳ 인코딩 변환 중 (EUC-KR 감지)...';
+      const r2 = new FileReader();
+      r2.onload = e2 => {
+        const textEuc = e2.target.result;
+        if (!parseAndLoadCSV(textEuc, statusEl)) {
+          // 그래도 실패하면 UTF-8 결과로 마지막 시도
+          parseAndLoadCSV(textUtf8, statusEl);
+        }
+      };
+      r2.onerror = () => {
+        statusEl.style.color = 'var(--red)';
+        statusEl.textContent = '❌ 파일 읽기 오류. 파일을 확인해주세요.';
+      };
+      r2.readAsText(file, 'EUC-KR');
     }
   };
-  reader.readAsText(file);
+  r1.onerror = () => {
+    statusEl.style.color = 'var(--red)';
+    statusEl.textContent = '❌ 파일 읽기 오류.';
+  };
+  r1.readAsText(file, 'UTF-8');
+}
+
+function renderAdminUnitList() {
+  const card = document.getElementById('admin-wordlist-card');
+  const list = document.getElementById('admin-unit-list');
+  const count = document.getElementById('admin-unit-count');
+  if (!card || !list) return;
+
+  card.style.display = 'block';
+  count.textContent = `총 ${WORD_UNITS.length}개 단원`;
+  list.innerHTML = '';
+
+  WORD_UNITS.forEach((unit, idx) => {
+    const isBuiltin = idx < 2;
+    const preview3 = unit.words.slice(0,3).map(w => `${w.en}(${w.ko})`).join(', ');
+    const item = document.createElement('div');
+    item.style.cssText = `border:1px solid rgba(201,162,75,${isBuiltin?'.12':'.25'});border-radius:10px;padding:12px 14px;margin-bottom:8px;background:${isBuiltin?'rgba(0,0,0,.1)':'rgba(201,162,75,.04)'};`;
+    item.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:700;display:flex;align-items:center;gap:6px;">
+            ${isBuiltin ? '<span style="font-size:10px;background:var(--navy-light);color:var(--gray-400);padding:2px 6px;border-radius:4px;">기본</span>' : '<span style="font-size:10px;background:rgba(201,162,75,.2);color:var(--gold);padding:2px 6px;border-radius:4px;">업로드</span>'}
+            ${unit.title}
+          </div>
+          <div style="font-size:12px;color:var(--gray-400);margin-top:4px;">${unit.subtitle}</div>
+          <div style="font-size:11px;color:var(--gray-600);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${preview3}${unit.words.length>3?' ...':''}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+          <button onclick="previewUnit(${idx})" style="background:rgba(201,162,75,.15);border:1px solid var(--gold);color:var(--gold);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;white-space:nowrap;">📋 미리보기</button>
+          ${!isBuiltin ? `<button onclick="removeUnit(${idx})" style="background:rgba(239,68,68,.12);border:1px solid var(--red);color:var(--red);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;">🗑</button>` : ''}
+        </div>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+}
+
+function previewUnit(idx) {
+  const unit = WORD_UNITS[idx];
+  if (!unit) return;
+  const preview = unit.words.slice(0, 15).map((w,i) => {
+    let line = `${String(i+1).padStart(2,' ')}. ${w.en.padEnd(15,' ')} ${w.ko}`;
+    if (w.ex)   line += `\n     예) ${w.ex}`;
+    if (w.exKo) line += `  → ${w.exKo}`;
+    return line;
+  }).join('\n');
+  alert(`📚 ${unit.title}  (${unit.subtitle})\n${'─'.repeat(40)}\n${preview}${unit.words.length > 15 ? '\n...(' + (unit.words.length-15) + '개 더 있음)' : ''}`);
+}
+
+function removeUnit(idx) {
+  if (idx < 2) { alert('기본 단어장은 삭제할 수 없습니다.'); return; }
+  if (!confirm(`"${WORD_UNITS[idx].title}" 단어장을 삭제하시겠습니까?`)) return;
+  WORD_UNITS.splice(idx, 1);
+  renderAdminUnitList();
+  showToast('단어장이 삭제되었습니다.');
+}
+
+function downloadSampleCSV() {
+  // BOM 추가로 엑셀에서도 한글 깨짐 없이 열림
+  const bom = '\uFEFF';
+  const sample = bom + `Unit,영단어,한글뜻,예문,한글해석
+Unit 1,ability,능력,She has the ability to learn quickly.,그녀는 빠르게 배우는 능력이 있다.
+Unit 1,achieve,성취하다,You can achieve your goals.,너는 목표를 달성할 수 있다.
+Unit 1,adventure,모험,Life is a great adventure.,인생은 위대한 모험이다.
+Unit 1,ancient,고대의,This is an ancient temple.,이것은 고대 사원이다.
+Unit 1,bravery,용기,She showed great bravery.,그녀는 큰 용기를 보여주었다.
+Unit 2,celebrate,축하하다,Let us celebrate together.,함께 축하하자.
+Unit 2,curious,호기심이 많은,Children are naturally curious.,아이들은 본래 호기심이 많다.
+Unit 2,dangerous,위험한,Driving fast is dangerous.,빠르게 운전하는 것은 위험하다.
+Unit 2,discover,발견하다,Scientists discover new things.,과학자들은 새로운 것을 발견한다.
+Unit 2,energy,에너지,She is full of energy.,그녀는 활력이 넘친다.
+Unit 3,famous,유명한,He is a famous singer.,그는 유명한 가수이다.
+Unit 3,grateful,감사하는,I am grateful for your help.,도움에 감사드립니다.
+Unit 3,honest,정직한,Always be honest with others.,항상 다른 사람들에게 정직하라.
+Unit 3,imagine,상상하다,Imagine a better world.,더 나은 세상을 상상해봐.
+Unit 3,jealous,질투하는,Do not be jealous of others.,다른 사람을 질투하지 마라.`;
+  const blob = new Blob([sample], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = '이든_단어장_샘플.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function showCsvTip() {
+  alert(`📊 엑셀로 단어장 만드는 방법\n\n` +
+    `① 엑셀 실행 → 새 파일\n` +
+    `② A1: Unit  B1: 영단어  C1: 한글뜻  D1: 예문  E1: 한글해석\n` +
+    `③ 2행부터 데이터 입력\n   예) A2: Unit 1  B2: ability  C2: 능력\n` +
+    `④ 같은 단원은 A열에 같은 이름 반복 입력\n   예) Unit 1, Unit 1, Unit 1, Unit 2, Unit 2...\n` +
+    `⑤ 저장: [파일] → [다른 이름으로 저장]\n   → 파일 형식: CSV (쉼표로 분리) 선택\n   (UTF-8 또는 일반 CSV 모두 가능 — 자동 인식됩니다)\n\n` +
+    `💡 샘플 CSV를 다운로드하여 엑셀로 열면 형식을 바로 확인할 수 있습니다!`);
 }
 
 // ═══════════════════════════════════════════════
