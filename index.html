@@ -1199,7 +1199,16 @@
   <div class="stage-header">
     <button class="btn-back" onclick="confirmBack()">←</button>
     <div class="stage-title-text">2차 학습 · 라이트너 분류</div>
-    <div class="stage-progress-text" id="s2-round-label"></div>
+    <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+      <span style="font-size:11px;color:var(--gray-400);">한글 먼저</span>
+      <label style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;">
+        <input type="checkbox" id="s2-dir-toggle" onchange="toggleS2Dir()" style="opacity:0;width:0;height:0;">
+        <span style="position:absolute;inset:0;background:#234870;border-radius:20px;transition:.2s;"></span>
+        <span id="s2-dir-knob" style="position:absolute;left:3px;top:3px;width:14px;height:14px;background:#c9a24b;border-radius:50%;transition:.2s;"></span>
+      </label>
+      <span style="font-size:11px;color:var(--gray-400);">영어 먼저</span>
+      <div class="stage-progress-text" id="s2-round-label" style="margin-left:8px;"></div>
+    </div>
   </div>
   <div class="leitner-area">
     <div class="round-info">
@@ -1285,7 +1294,16 @@
   <div class="stage-header">
     <button class="btn-back" onclick="confirmBack()">←</button>
     <div class="stage-title-text">3차 테스트 · 타임어택</div>
-    <div class="stage-progress-text" id="s3-progress"></div>
+    <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+      <span style="font-size:11px;color:var(--gray-400);">한글 먼저</span>
+      <label style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;">
+        <input type="checkbox" id="s3-dir-toggle" onchange="toggleS3Dir()" style="opacity:0;width:0;height:0;">
+        <span style="position:absolute;inset:0;background:#234870;border-radius:20px;transition:.2s;"></span>
+        <span id="s3-dir-knob" style="position:absolute;left:3px;top:3px;width:14px;height:14px;background:#c9a24b;border-radius:50%;transition:.2s;"></span>
+      </label>
+      <span style="font-size:11px;color:var(--gray-400);">영어 먼저</span>
+      <div class="stage-progress-text" id="s3-progress" style="margin-left:8px;"></div>
+    </div>
   </div>
   <div class="timebar-wrap">
     <div class="timebar-track"><div class="timebar-fill" id="timebar"></div></div>
@@ -1381,7 +1399,15 @@
     <div class="blast-top-bar">
       <button class="blast-back-btn" onclick="stopBlast(); showScreen('screen-mode')">←</button>
       <div class="blast-score">⭐ <span id="blast-score">0</span>점</div>
-      <div style="width:50px;"></div>
+      <div style="display:flex;align-items:center;gap:5px;">
+        <span style="font-size:10px;color:rgba(255,255,255,.6);">한글</span>
+        <label style="position:relative;display:inline-block;width:34px;height:18px;cursor:pointer;">
+          <input type="checkbox" id="blast-dir-toggle" onchange="toggleBlastDir()" style="opacity:0;width:0;height:0;">
+          <span style="position:absolute;inset:0;background:rgba(35,72,112,.8);border-radius:18px;transition:.2s;"></span>
+          <span id="blast-dir-knob" style="position:absolute;left:2px;top:2px;width:14px;height:14px;background:#c9a24b;border-radius:50%;transition:.2s;"></span>
+        </label>
+        <span style="font-size:10px;color:rgba(255,255,255,.6);">영어</span>
+      </div>
     </div>
     <div class="blast-question-wrap">
       <div class="blast-question" id="blast-question">준비...</div>
@@ -1733,6 +1759,7 @@ let state = {
   s3FirstWrong: [], s3MetaWrong: [], // 메타인지 오류
   // 학습하기
   learnQueue: [], learnCorrect: 0, learnTotal: 0, learnDir: 'en2ko',
+  s2Dir: 'en2ko', s3Dir: 'en2ko', blastDir: 'en2ko',
   // 맞추기
   matchItems: [], matchSelected: null, matchTimer: null, matchElapsed: 0,
   // blast
@@ -2120,10 +2147,23 @@ function speakCurrent() {
 // ═══════════════════════════════════════════════
 // 2차 학습 (라이트너)
 // ═══════════════════════════════════════════════
+function toggleS2Dir() {
+  state.s2Dir = state.s2Dir === 'en2ko' ? 'ko2en' : 'en2ko';
+  const knob = document.getElementById('s2-dir-knob');
+  if (knob) knob.style.left = state.s2Dir === 'en2ko' ? '3px' : '19px';
+  // 현재 카드 즉시 갱신
+  if (state.s2Current && state.s2Current.length > 0) renderLeitner();
+}
+
 function startStage2() {
   const words = [...state.currentUnit.words];
   state.s2Round = 1; state.s2Right = []; state.s2Top = [];
   state.s2Left = []; state.s2Current = [...words]; state.s2Flipped = false;
+  // 토글 초기화
+  const toggle = document.getElementById('s2-dir-toggle');
+  const knob = document.getElementById('s2-dir-knob');
+  if (toggle) toggle.checked = (state.s2Dir === 'en2ko');
+  if (knob) knob.style.left = state.s2Dir === 'en2ko' ? '3px' : '19px';
   showScreen('screen-stage2');
   renderLeitner();
   // 스와이프 초기화
@@ -2162,8 +2202,14 @@ function renderLeitner() {
   // 내용 업데이트
   const wordEl = document.getElementById('s2-word');
   const meaningEl = document.getElementById('s2-meaning-back');
-  if (wordEl) wordEl.textContent = w.en;
-  if (meaningEl) meaningEl.textContent = w.ko;           // 뒷면에 한글만
+  // s2Dir: 'en2ko' → 앞면 영어/뒷면 한글, 'ko2en' → 앞면 한글/뒷면 영어
+  if (state.s2Dir === 'ko2en') {
+    if (wordEl) wordEl.textContent = w.ko;
+    if (meaningEl) meaningEl.textContent = w.en;
+  } else {
+    if (wordEl) wordEl.textContent = w.en;
+    if (meaningEl) meaningEl.textContent = w.ko;
+  }
   // 라벨 초기화
   document.querySelectorAll('#s2-card .lc-swipe-label').forEach(l => l.style.opacity='0');
   speakWord(w.en);
@@ -2361,6 +2407,12 @@ function speakSpell() {
 // ═══════════════════════════════════════════════
 // 3차 학습 (타임어택)
 // ═══════════════════════════════════════════════
+function toggleS3Dir() {
+  state.s3Dir = state.s3Dir === 'en2ko' ? 'ko2en' : 'en2ko';
+  const knob = document.getElementById('s3-dir-knob');
+  if (knob) knob.style.left = state.s3Dir === 'en2ko' ? '3px' : '19px';
+}
+
 function startStage3() {
   clearInterval(state.s3TimerInterval);
   state.s3Round = 1;
@@ -2368,6 +2420,11 @@ function startStage3() {
   state.s3Queue = [...state.currentUnit.words];
   state.s3FirstWrong = []; state.s3MetaWrong = [];
   state.s3Flipped = false;
+  // 토글 초기화
+  const toggle = document.getElementById('s3-dir-toggle');
+  const knob = document.getElementById('s3-dir-knob');
+  if (toggle) toggle.checked = (state.s3Dir === 'en2ko');
+  if (knob) knob.style.left = state.s3Dir === 'en2ko' ? '3px' : '19px';
   showScreen('screen-stage3');
   // initSwipe 등록 (화면 전환 후 DOM 준비되면 바인딩)
   requestAnimationFrame(() => {
@@ -2428,8 +2485,14 @@ function renderStage3() {
   // 내용 업데이트
   const wordEl    = document.getElementById('s3-word');
   const meaningEl = document.getElementById('s3-meaning-back');
-  if (wordEl)    wordEl.textContent    = w.en;
-  if (meaningEl) meaningEl.textContent = w.ko;
+  // s3Dir: 'en2ko' → 앞면 영어/뒷면 한글, 'ko2en' → 앞면 한글/뒷면 영어
+  if (state.s3Dir === 'ko2en') {
+    if (wordEl)    wordEl.textContent    = w.ko;
+    if (meaningEl) meaningEl.textContent = w.en;
+  } else {
+    if (wordEl)    wordEl.textContent    = w.en;
+    if (meaningEl) meaningEl.textContent = w.ko;
+  }
 
   document.querySelectorAll('#s3-card .lc-swipe-label')
     .forEach(l => l.style.opacity = '0');
@@ -2733,6 +2796,17 @@ let blastShipX = 0, blastShipY = 0;
 let blastAnswered = false; // 중복 클릭 방지
 let blastStars = []; // 배경 별
 
+function toggleBlastDir() {
+  state.blastDir = state.blastDir === 'en2ko' ? 'ko2en' : 'en2ko';
+  const knob = document.getElementById('blast-dir-knob');
+  if (knob) knob.style.left = state.blastDir === 'en2ko' ? '2px' : '18px';
+  // 현재 질문 표시 갱신
+  if (blastCurrentQ) {
+    const qEl = document.getElementById('blast-question');
+    if (qEl) qEl.textContent = state.blastDir === 'en2ko' ? blastCurrentQ.ko : blastCurrentQ.en;
+  }
+}
+
 function startBlast() {
   showScreen('screen-blast');
   blastCanvas = document.getElementById('blast-canvas');
@@ -2747,6 +2821,9 @@ function startBlast() {
   blastCX = blastShipX; blastCY = blastShipY - 100;
   blastScore = 0; blastAsteroids = []; blastAnswered = false;
   document.getElementById('blast-score').textContent = '0';
+  // 토글 초기화
+  const blastKnob = document.getElementById('blast-dir-knob');
+  if (blastKnob) blastKnob.style.left = state.blastDir === 'en2ko' ? '2px' : '18px';
 
   // 배경 별 생성
   blastStars = Array.from({length:80}, () => ({
@@ -2837,7 +2914,9 @@ function nextBlastQuestion() {
     blastQIdx = 0;
   }
   blastCurrentQ = blastQWords[blastQIdx++];
-  document.getElementById('blast-question').textContent = blastCurrentQ.ko;
+  // blastDir: 'en2ko' → 한글 질문/영어 소행성, 'ko2en' → 영어 질문/한글 소행성
+  document.getElementById('blast-question').textContent =
+    state.blastDir === 'ko2en' ? blastCurrentQ.en : blastCurrentQ.ko;
   speakWord(blastCurrentQ.en);
   spawnAsteroids();
 }
@@ -2862,7 +2941,7 @@ function spawnAsteroids() {
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
       r,
-      word: w.en,
+      word: state.blastDir === 'ko2en' ? w.ko : w.en,
       isAnswer: w.en === blastCurrentQ.en,
       exploding: false, expFrame: 0, gone: false,
       bounced: false   // 벽 반사 횟수
