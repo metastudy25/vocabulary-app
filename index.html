@@ -506,7 +506,26 @@
   }
   .leitner-card:active { cursor: grabbing; }
   .leitner-card.animating { transition: transform .32s cubic-bezier(.4,0,.2,1), opacity .32s; }
-  .leitner-card.flipped-card { background: var(--gold-pale); }
+  /* flip 구조 */
+  .lc-inner {
+    width: 100%; height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform .46s cubic-bezier(.4,0,.2,1);
+    border-radius: 24px;
+  }
+  .leitner-card { perspective: 1000px; }
+  .lc-inner.lc-flipped { transform: rotateY(180deg); }
+  .lc-face {
+    position: absolute; width: 100%; height: 100%;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    border-radius: 24px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .lc-face-front { background: var(--white); color: var(--navy); }
+  .lc-face-back  { background: var(--gold-pale); color: var(--navy); transform: rotateY(180deg); }
+  .leitner-card.flipped-card { background: transparent; }
   .lc-word { font-size: clamp(28px, 5.5vw, 50px); font-weight: 900; text-align:center; padding:0 28px; }
   .lc-meaning { font-size: clamp(22px, 4.5vw, 40px); font-weight: 800; text-align:center; padding:0 28px; }
   .lc-tap { display: none; }
@@ -1090,17 +1109,17 @@
         <div class="mode-desc">라이트너 분류 3회독</div>
         <div class="mode-status" id="mode-status-2">1차 완료 후 해제</div>
       </div>
-      <div class="mode-btn" id="mode-btn-3" onclick="startSpell()">
-        <div class="mode-icon">✍️</div>
-        <div class="mode-name">철자 학습</div>
-        <div class="mode-desc">생성형 인출 3단계</div>
-        <div class="mode-status" id="mode-status-3">2차 완료 후 해제</div>
-      </div>
-      <div class="mode-btn" id="mode-btn-4" onclick="startStage(3)">
+      <div class="mode-btn" id="mode-btn-3" onclick="startStage(3)">
         <div class="mode-icon">⏱️</div>
         <div class="mode-name">3차 테스트</div>
         <div class="mode-desc">타임어택 최종 점검</div>
-        <div class="mode-status" id="mode-status-4">철자 완료 후 해제</div>
+        <div class="mode-status" id="mode-status-3">2차 완료 후 해제</div>
+      </div>
+      <div class="mode-btn" id="mode-btn-4" onclick="startSpell()">
+        <div class="mode-icon">✍️</div>
+        <div class="mode-name">철자 학습</div>
+        <div class="mode-desc">생성형 인출 3단계</div>
+        <div class="mode-status" id="mode-status-4">3차 완료 후 해제</div>
       </div>
     </div>
     <div class="mode-grid">
@@ -1201,8 +1220,14 @@
         <div class="lc-swipe-label label-left"  id="s2-label-left">✗ 모름</div>
         <div class="lc-swipe-label label-right" id="s2-label-right">✓ 알아!</div>
         <div class="lc-swipe-label label-up"    id="s2-label-up">△ 애매</div>
-        <div class="lc-word" id="s2-word"></div>
-        <div class="lc-tap" id="s2-tap">탭하여 뒤집기</div>
+        <div class="lc-inner" id="s2-inner">
+          <div class="lc-face lc-face-front">
+            <div class="lc-word" id="s2-word"></div>
+          </div>
+          <div class="lc-face lc-face-back">
+            <div class="lc-meaning" id="s2-meaning-back"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="leitner-btns">
@@ -1233,8 +1258,7 @@
       <button class="level-tab" id="spell-tab-2" onclick="setSpellLevel(2)">Lv.2 빈칸</button>
       <button class="level-tab" id="spell-tab-3" onclick="setSpellLevel(3)">Lv.3 전체</button>
     </div>
-    <div class="spell-question">
-      <button style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--gold);margin-bottom:8px;" onclick="speakSpell()">🔊</button>
+    <div class="spell-question" onclick="speakSpell()" style="cursor:pointer;" title="클릭하면 발음">
       <div class="spell-meaning" id="spell-meaning"></div>
       <div class="spell-level-badge" id="spell-level-badge">블록 조합 모드</div>
     </div>
@@ -1286,8 +1310,14 @@
         <div class="lc-swipe-label label-left"  id="s3-label-left">✗ 모름</div>
         <div class="lc-swipe-label label-right" id="s3-label-right">✓ 알아!</div>
         <div class="lc-swipe-label label-up"    id="s3-label-up">△ 애매</div>
-        <div class="lc-word" id="s3-word"></div>
-        <div class="lc-tap" id="s3-tap">탭하여 뒤집기</div>
+        <div class="lc-inner" id="s3-inner">
+          <div class="lc-face lc-face-front">
+            <div class="lc-word" id="s3-word"></div>
+          </div>
+          <div class="lc-face lc-face-back">
+            <div class="lc-meaning" id="s3-meaning-back"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="leitner-btns">
@@ -1646,10 +1676,11 @@ function selectUnit(idx) {
 function renderModeButtons() {
   const uid = state.currentUnit?.id;
   const d1 = state.stage1Done[uid], d2 = state.stage2Done[uid],
-        ds = state.spellDone[uid], d3 = state.stage3Done[uid];
-  setModeBtn('mode-btn-2', !d1, d2, '1차 완료 후 해제', '학습 가능', '완료✓', 'mode-status-2');
-  setModeBtn('mode-btn-3', !d2, ds, '2차 완료 후 해제', '학습 가능', '완료✓', 'mode-status-3');
-  setModeBtn('mode-btn-4', !ds, d3, '철자 완료 후 해제', '테스트 시작', '완료✓', 'mode-status-4');
+        d3 = state.stage3Done[uid], ds = state.spellDone[uid];
+  // 순서: 1차→2차→3차테스트→철자
+  setModeBtn('mode-btn-2', !d1, d2,  '1차 완료 후 해제', '학습 가능',   '완료✓', 'mode-status-2');
+  setModeBtn('mode-btn-3', !d2, d3,  '2차 완료 후 해제', '테스트 시작', '완료✓', 'mode-status-3');
+  setModeBtn('mode-btn-4', !d3, ds,  '3차 완료 후 해제', '철자 도전',   '완료✓', 'mode-status-4');
 }
 function setModeBtn(btnId, locked, done, lockText, activeText, doneText, statusId) {
   const btn = document.getElementById(btnId);
@@ -1665,7 +1696,7 @@ function setModeBtn(btnId, locked, done, lockText, activeText, doneText, statusI
 function startStage(n) {
   const uid = state.currentUnit?.id;
   if (n === 2 && !state.stage1Done[uid]) { showToast('1차 학습을 먼저 완료하세요!'); return; }
-  if (n === 3 && !state.spellDone[uid]) { showToast('철자 학습을 먼저 완료하세요!'); return; }
+  if (n === 3 && !state.stage2Done[uid]) { showToast('2차 학습을 먼저 완료하세요!'); return; }
   if (n === 1) startStage1();
   else if (n === 2) startStage2();
   else if (n === 3) startStage3();
@@ -1889,50 +1920,31 @@ function renderLeitner() {
     }
     state.stage2Done[state.currentUnit.id] = true;
     saveUserProgress();
-    showToast('2차 학습 완료! 이제 철자 학습으로 🎓');
+    showToast('2차 학습 완료! 이제 3차 테스트로 ⏱️');
     setTimeout(() => showScreen('screen-mode'), 1400);
     return;
   }
   document.getElementById('s2-round').textContent = state.s2Round;
   document.getElementById('s2-round-label').textContent = `${state.s2Round}회독`;
   const w = state.s2Current[0];
-  const card = document.getElementById('s2-card');
-  // 라벨 유지, 내용만 교체
-  card.querySelector('#s2-word') 
-    ? (card.querySelector('#s2-word').textContent = w.en, card.querySelector('#s2-tap').textContent = '탭하여 뜻 확인')
-    : null;
-  // innerHTML로 내용 업데이트 (라벨 div는 유지)
-  const labels = card.querySelectorAll('.lc-swipe-label');
-  card.innerHTML = '';
-  labels.forEach(l => { l.style.opacity='0'; card.appendChild(l); });
-  const wordDiv = document.createElement('div');
-  wordDiv.className = 'lc-word'; wordDiv.id = 's2-word'; wordDiv.textContent = w.en;
-  const tapDiv = document.createElement('div');
-  tapDiv.className = 'lc-tap'; tapDiv.id = 's2-tap'; tapDiv.textContent = '탭하여 뜻 확인';
-  card.appendChild(wordDiv); card.appendChild(tapDiv);
-  card.classList.remove('flipped-card');
+  // flip 리셋 (앞면)
+  const inner = document.getElementById('s2-inner');
+  if (inner) inner.classList.remove('lc-flipped');
   state.s2Flipped = false;
+  // 내용 업데이트
+  const wordEl = document.getElementById('s2-word');
+  const meaningEl = document.getElementById('s2-meaning-back');
+  if (wordEl) wordEl.textContent = w.en;
+  if (meaningEl) meaningEl.textContent = w.ko;           // 뒷면에 한글만
+  // 라벨 초기화
+  document.querySelectorAll('#s2-card .lc-swipe-label').forEach(l => l.style.opacity='0');
   speakWord(w.en);
 }
 function flipLeitner() {
-  state.s2Flipped = !state.s2Flipped;
   if (!state.s2Current.length) return;
-  const w = state.s2Current[0];
-  const card = document.getElementById('s2-card');
-  const labels = card.querySelectorAll('.lc-swipe-label');
-  card.innerHTML = '';
-  labels.forEach(l => card.appendChild(l));
-  if (state.s2Flipped) {
-    card.classList.add('flipped-card');
-    const md = document.createElement('div'); md.className='lc-meaning'; md.textContent=w.ko; card.appendChild(md);
-    const sd = document.createElement('div'); sd.style.cssText='font-size:14px;color:#64748b;margin-top:8px;'; sd.textContent=w.en; card.appendChild(sd);
-    const td = document.createElement('div'); td.className='lc-tap'; td.textContent='스와이프로 분류하세요'; card.appendChild(td);
-  } else {
-    card.classList.remove('flipped-card');
-    const wd = document.createElement('div'); wd.className='lc-word'; wd.id='s2-word'; wd.textContent=w.en; card.appendChild(wd);
-    const td = document.createElement('div'); td.className='lc-tap'; td.id='s2-tap'; td.textContent=''; card.appendChild(td);
-    speakWord(w.en);
-  }
+  state.s2Flipped = !state.s2Flipped;
+  const inner = document.getElementById('s2-inner');
+  if (inner) inner.classList.toggle('lc-flipped', state.s2Flipped);
 }
 function leitnerSwipe(dir) {
   if (state.s2Current.length === 0) return;
@@ -1955,7 +1967,7 @@ function updateS2Counts() {
 // ═══════════════════════════════════════════════
 function startSpell() {
   const uid = state.currentUnit?.id;
-  if (!state.stage2Done[uid]) { showToast('2차 학습을 먼저 완료하세요!'); return; }
+  if (!state.stage3Done[uid]) { showToast('3차 테스트를 먼저 완료하세요!'); return; }
   state.spellLevel = 1; state.spellIdx = 0;
   state.spellQueue = [...state.currentUnit.words];
   showScreen('screen-spell');
@@ -1988,7 +2000,7 @@ function renderSpell() {
   document.getElementById('spell-level-badge').textContent = badges[state.spellLevel - 1];
   renderSpellDisplay();
   renderSpellBlocks(w.en);
-  speakWord(w.en);
+  // 발음은 카드 클릭 또는 정답 완성 시에만
 }
 function renderSpellDisplay() {
   const w = state.spellQueue[0];
@@ -1999,10 +2011,10 @@ function renderSpellDisplay() {
     const slot = document.createElement('div');
     slot.className = 'spell-slot';
     if (state.spellLevel === 2 && (i === 0 || i === en.length-1 || i % 3 === 0)) {
-      slot.textContent = en[i].toUpperCase();
+      slot.textContent = en[i];   // 소문자
       slot.classList.add('hint-letter');
     } else if (state.spellSelected[i]) {
-      slot.textContent = state.spellSelected[i].toUpperCase();
+      slot.textContent = state.spellSelected[i];  // 소문자
       slot.classList.add('filled');
       slot.onclick = () => removeFromSlot(i);
     }
@@ -2011,14 +2023,29 @@ function renderSpellDisplay() {
 }
 function renderSpellBlocks(word) {
   if (state.spellLevel === 3) return;
-  const letters = word.toLowerCase().split('').sort(() => Math.random() - .5);
   const area = document.getElementById('spell-blocks');
   area.innerHTML = '';
+
+  let letters;
+  if (state.spellLevel === 1) {
+    // Lv.1: 26개 알파벳 풀에서 무작위 12개 + 정답 글자 보장
+    const abc = 'abcdefghijklmnopqrstuvwxyz'.split('');
+    const answer = word.toLowerCase().split('');
+    // 무작위 추가 글자 (정답 제외, 최대 12-answer.length 개)
+    const extras = abc.filter(c => !answer.includes(c))
+      .sort(() => Math.random() - .5)
+      .slice(0, Math.max(4, 12 - answer.length));
+    letters = [...answer, ...extras].sort(() => Math.random() - .5);
+  } else {
+    // Lv.2: 단어 글자만 섞기
+    letters = word.toLowerCase().split('').sort(() => Math.random() - .5);
+  }
+
   letters.forEach((l, i) => {
     const b = document.createElement('div');
     b.className = 'spell-block';
     b.id = `block-${i}`;
-    b.textContent = l.toUpperCase();
+    b.textContent = l;
     b.onclick = () => pickBlock(l, i);
     area.appendChild(b);
   });
@@ -2060,11 +2087,12 @@ function spellCheck() {
   const fb = document.getElementById('spell-feedback');
   if (correct) {
     fb.textContent = '정답! ✅'; fb.className = 'spell-feedback correct';
+    speakWord(en);    // 완성 시 발음
     showToast(`정답! ${en} 🎉`);
     state.spellQueue.shift();
-    setTimeout(renderSpell, 1000);
+    setTimeout(renderSpell, 1100);
   } else {
-    fb.textContent = `다시! 정답: ${en.toUpperCase()}`; fb.className = 'spell-feedback wrong';
+    fb.textContent = `다시! 정답: ${en}`; fb.className = 'spell-feedback wrong';
     speakWord(en);
     state.spellSelected = [];
     setTimeout(() => { renderSpellDisplay(); renderSpellBlocks(state.spellQueue[0].en); }, 1200);
@@ -2076,11 +2104,12 @@ function checkSpellType() {
   const fb = document.getElementById('spell-feedback');
   if (typed === state.spellAnswer) {
     fb.textContent = '정답! ✅'; fb.className = 'spell-feedback correct';
+    speakWord(state.spellAnswer);  // 완성 시 발음
     input.value = '';
     state.spellQueue.shift();
-    setTimeout(renderSpell, 900);
+    setTimeout(renderSpell, 1100);
   } else {
-    fb.textContent = `다시! 정답: ${state.spellAnswer.toUpperCase()}`; fb.className = 'spell-feedback wrong';
+    fb.textContent = `다시! 정답: ${state.spellAnswer}`; fb.className = 'spell-feedback wrong';
     speakWord(state.spellAnswer);
     input.value = '';
   }
@@ -2133,53 +2162,25 @@ function renderStage3() {
   }
   document.getElementById('s3-round').textContent = state.s3Round;
   const w = state.s3Queue[0];
-  const card = document.getElementById('s3-card');
-  const labels = card.querySelectorAll('.lc-swipe-label');
-  card.innerHTML = '';
-  labels.forEach(l => { l.style.opacity='0'; card.appendChild(l); });
-  const wd = document.createElement('div'); wd.className='lc-word'; wd.id='s3-word'; wd.textContent=w.en; card.appendChild(wd);
-  const td = document.createElement('div'); td.className='lc-tap'; td.id='s3-tap'; td.textContent=''; card.appendChild(td);
-  card.classList.remove('flipped-card');
+  // flip 리셋 (앞면)
+  const inner = document.getElementById('s3-inner');
+  if (inner) inner.classList.remove('lc-flipped');
   state.s3Flipped = false;
+  const wordEl = document.getElementById('s3-word');
+  const meaningEl = document.getElementById('s3-meaning-back');
+  if (wordEl) wordEl.textContent = w.en;
+  if (meaningEl) meaningEl.textContent = w.ko;
+  document.querySelectorAll('#s3-card .lc-swipe-label').forEach(l => l.style.opacity='0');
   speakWord(w.en);
   startTimer3();
 }
 function flipLeitner3() {
-  state.s3Flipped = !state.s3Flipped;
   if (!state.s3Queue.length) return;
-  const w = state.s3Queue[0];
-  const card = document.getElementById('s3-card');
-  const labels = card.querySelectorAll('.lc-swipe-label');
-  card.innerHTML = '';
-  labels.forEach(l => card.appendChild(l));
-  if (state.s3Flipped) {
-    card.classList.add('flipped-card');
-    const md = document.createElement('div'); md.className='lc-meaning'; md.textContent=w.ko; card.appendChild(md);
-    const sd = document.createElement('div'); sd.style.cssText='font-size:14px;color:#64748b;margin-top:8px;'; sd.textContent=w.en; card.appendChild(sd);
-    const td2 = document.createElement('div'); td2.className='lc-tap'; td2.textContent=''; card.appendChild(td2);
-  } else {
-    card.classList.remove('flipped-card');
-    const wd2 = document.createElement('div'); wd2.className='lc-word'; wd2.id='s3-word'; wd2.textContent=w.en; card.appendChild(wd2);
-    const td2 = document.createElement('div'); td2.className='lc-tap'; td2.id='s3-tap'; td2.textContent=''; card.appendChild(td2);
-  }
+  state.s3Flipped = !state.s3Flipped;
+  const inner = document.getElementById('s3-inner');
+  if (inner) inner.classList.toggle('lc-flipped', state.s3Flipped);
 }
-function startTimer3() {
-  state.s3TimeLeft = 3.0;
-  updateTimebar(3.0);
-  state.s3TimerInterval = setInterval(() => {
-    state.s3TimeLeft -= 0.1;
-    updateTimebar(state.s3TimeLeft);
-    if (state.s3TimeLeft <= 0) {
-      clearInterval(state.s3TimerInterval);
-      leitner3Swipe('left'); // 시간초과 = 틀림
-    }
-  }, 100);
-}
-function updateTimebar(t) {
-  const pct = Math.max(0, (t / 3.0) * 100);
-  document.getElementById('timebar').style.width = pct + '%';
-  document.getElementById('timebar-secs').textContent = Math.max(0, t).toFixed(1);
-}
+
 function leitner3Swipe(dir) {
   clearInterval(state.s3TimerInterval);
   if (state.s3Queue.length === 0) return;
@@ -2532,33 +2533,25 @@ function spawnAsteroids() {
   const pool = state.currentUnit.words.filter(w => w.en !== blastCurrentQ.en)
     .sort(() => Math.random()-.5).slice(0, 4);
   const all = [...pool, blastCurrentQ].sort(() => Math.random()-.5);
-  const W = blastCanvas.width;
-  const r_base = Math.min(54, W / 8); // 반응형 크기
+  const W = blastCanvas.width, H = blastCanvas.height;
+  const r_base = Math.min(56, W / 7);
+  const cx = W / 2, cy = H / 2;  // 화면 중앙에서 퍼져나감
 
-  // 흩어져 내려오기: 각 소행성마다 완전히 다른 시작 X, 다른 시작 Y 딜레이
-  const usedX = [];
+  // 5방향으로 균등하게 퍼짐 (각도 간격 72도)
   all.forEach((w, i) => {
-    const r = r_base + Math.random() * 10;
-    // X: 겹치지 않게 랜덤 배치
-    let x, tries = 0;
-    do {
-      x = r + Math.random() * (W - r * 2);
-      tries++;
-    } while (tries < 20 && usedX.some(ux => Math.abs(ux - x) < r * 2.2));
-    usedX.push(x);
-
-    // Y: 각자 다른 높이에서 시작 → 뭉쳐 보이지 않음
-    const startY = -r - i * (60 + Math.random() * 80);
-
+    const r = r_base + Math.random() * 8;
+    const angle = (i / all.length) * Math.PI * 2 + Math.random() * 0.3;
+    const speed = 0.8 + Math.random() * 0.6;
     blastAsteroids.push({
-      x,
-      y: startY,
-      vy: 0.55 + Math.random() * 0.75,       // 속도도 제각각
-      vx: (Math.random() - 0.5) * 1.0,
+      x: cx,
+      y: cy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
       r,
       word: w.en,
       isAnswer: w.en === blastCurrentQ.en,
-      exploding: false, expFrame: 0, gone: false
+      exploding: false, expFrame: 0, gone: false,
+      bounced: false   // 벽 반사 횟수
     });
   });
 }
@@ -2609,10 +2602,11 @@ function blastLoop() {
     if (a.gone) return;
     if (!a.exploding) {
       a.x += a.vx; a.y += a.vy;
-      // 벽 반사
-      if (a.x - a.r < 0) { a.x = a.r; a.vx = Math.abs(a.vx); }
-      if (a.x + a.r > W) { a.x = W - a.r; a.vx = -Math.abs(a.vx); }
-      if (a.y > H + 80) { a.y = -a.r - 20; }
+      // 벽 반사 (전 방향)
+      if (a.x - a.r < 0)  { a.x = a.r;     a.vx =  Math.abs(a.vx); }
+      if (a.x + a.r > W)  { a.x = W - a.r;  a.vx = -Math.abs(a.vx); }
+      if (a.y - a.r < 80) { a.y = a.r + 80; a.vy =  Math.abs(a.vy); }
+      if (a.y + a.r > H)  { a.y = H - a.r;  a.vy = -Math.abs(a.vy); }
     }
 
     if (a.exploding) {
@@ -2649,26 +2643,21 @@ function blastLoop() {
     // 광택
     blastCtx.fillStyle = 'rgba(255,255,255,.12)';
     blastCtx.beginPath(); blastCtx.ellipse(a.x-a.r*.25, a.y-a.r*.3, a.r*.35, a.r*.22, -Math.PI/4, 0, Math.PI*2); blastCtx.fill();
-    // 단어 텍스트 — 전체 크게, 정답/오답 동일 크기
+    // 단어 텍스트 — 항상 한 줄, 소행성 크기에 맞게 폰트 자동 축소
     blastCtx.fillStyle = '#ffffff';
     blastCtx.textAlign = 'center';
     blastCtx.textBaseline = 'middle';
-    blastCtx.shadowColor = 'rgba(0,0,0,.9)';
+    blastCtx.shadowColor = 'rgba(0,0,0,.95)';
     blastCtx.shadowBlur = 8;
-    const maxFontPx = Math.min(22, Math.floor(a.r * 0.44));
-    if (a.word.length <= 8) {
-      blastCtx.font = `900 ${maxFontPx}px 'Noto Sans KR', Arial`;
-      blastCtx.fillText(a.word, a.x, a.y);
-    } else {
-      // 긴 단어는 두 줄로
-      const half = Math.ceil(a.word.length / 2);
-      const line1 = a.word.substring(0, half);
-      const line2 = a.word.substring(half);
-      const lh = Math.max(12, maxFontPx - 2);
-      blastCtx.font = `900 ${Math.max(14, maxFontPx - 3)}px 'Noto Sans KR', Arial`;
-      blastCtx.fillText(line1, a.x, a.y - lh * 0.6);
-      blastCtx.fillText(line2, a.x, a.y + lh * 0.6);
+    // 폰트를 줄여가며 a.r*1.8 너비 안에 들어올 때까지 시도
+    let fontSize = Math.min(20, Math.floor(a.r * 0.42));
+    const maxWidth = a.r * 1.75;
+    blastCtx.font = `900 ${fontSize}px Arial`;
+    while (fontSize > 8 && blastCtx.measureText(a.word).width > maxWidth) {
+      fontSize--;
+      blastCtx.font = `900 ${fontSize}px Arial`;
     }
+    blastCtx.fillText(a.word, a.x, a.y);
     blastCtx.shadowBlur = 0;
   });
 
